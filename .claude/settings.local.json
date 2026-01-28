@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter create:*)",
+      "Bash(flutter pub:*)",
+      "Bash(dart run build_runner:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(npm install -g firebase-tools)",
+      "Bash(~/.local/bin/firebase projects:list:*)"
+    ]
+  }
+}
