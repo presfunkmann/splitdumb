@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:splitdumb/core/constants/app_constants.dart';
 import 'package:splitdumb/features/auth/domain/user_model.dart';
@@ -9,13 +10,18 @@ class AuthRepository {
   final FirebaseFirestore _firestore;
   final GoogleSignIn _googleSignIn;
 
+  // Web client ID from Google Cloud Console
+  static const _webClientId = '305778996481-6ed5lshrvg2ub2l1nhvpghlntntg77a9.apps.googleusercontent.com';
+
   AuthRepository({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? GoogleSignIn(
+          clientId: kIsWeb ? _webClientId : null,
+        );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
