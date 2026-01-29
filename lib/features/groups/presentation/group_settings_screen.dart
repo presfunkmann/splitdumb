@@ -221,18 +221,24 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(groupNotifierProvider.notifier).updateGroup(
-          groupId: widget.groupId,
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-        );
+    try {
+      await ref.read(groupNotifierProvider.notifier).updateGroup(
+            groupId: widget.groupId,
+            name: _nameController.text.trim(),
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+          );
 
-    setState(() => _isEditing = false);
-    ref.invalidate(groupByIdProvider(widget.groupId));
-    if (mounted) {
-      context.showSnackBar('Group updated!');
+      setState(() => _isEditing = false);
+      ref.invalidate(groupByIdProvider(widget.groupId));
+      if (mounted) {
+        context.showSnackBar('Group updated!');
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showSnackBar('Failed to update: $e');
+      }
     }
   }
 
@@ -256,11 +262,19 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
               ),
               onPressed: () async {
                 Navigator.pop(context);
-                await ref
-                    .read(groupNotifierProvider.notifier)
-                    .deleteGroup(widget.groupId);
-                if (context.mounted) {
-                  context.go('/');
+                try {
+                  await ref
+                      .read(groupNotifierProvider.notifier)
+                      .deleteGroup(widget.groupId);
+                  if (context.mounted) {
+                    context.go('/');
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete: $e')),
+                    );
+                  }
                 }
               },
               child: const Text('Delete'),
