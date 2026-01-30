@@ -175,7 +175,7 @@ class GroupsListScreen extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Join Group'),
+          title: const Text('Claim Invite'),
           content: TextField(
             controller: controller,
             textCapitalization: TextCapitalization.characters,
@@ -198,7 +198,7 @@ class GroupsListScreen extends ConsumerWidget {
                 Navigator.pop(context);
                 final group = await ref
                     .read(groupNotifierProvider.notifier)
-                    .joinGroupByCode(code);
+                    .claimMemberByInviteCode(code);
 
                 if (group != null && context.mounted) {
                   context.showSnackBar('Joined ${group.name}!');
@@ -255,7 +255,7 @@ class _GroupCard extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '${group.memberIds.length} members',
+                      '${group.members.length} members',
                       style: context.textTheme.bodySmall?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),

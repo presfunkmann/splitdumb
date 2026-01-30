@@ -7,6 +7,7 @@ class AppConstants {
   static const String groupsCollection = 'groups';
   static const String expensesCollection = 'expenses';
   static const String settlementsCollection = 'settlements';
+  static const String inviteCodesCollection = 'inviteCodes';
 
   // Error messages
   static const String genericError = 'Something went wrong. Please try again.';

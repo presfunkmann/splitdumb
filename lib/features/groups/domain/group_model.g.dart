@@ -10,11 +10,13 @@ _GroupModel _$GroupModelFromJson(Map<String, dynamic> json) => _GroupModel(
   id: json['id'] as String,
   name: json['name'] as String,
   description: json['description'] as String?,
-  memberIds: (json['memberIds'] as List<dynamic>)
+  members: (json['members'] as List<dynamic>)
+      .map((e) => GroupMember.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  linkedUserIds: (json['linkedUserIds'] as List<dynamic>)
       .map((e) => e as String)
       .toList(),
   createdBy: json['createdBy'] as String,
-  inviteCode: json['inviteCode'] as String,
   createdAt: const TimestampConverter().fromJson(json['createdAt']),
 );
 
@@ -23,8 +25,8 @@ Map<String, dynamic> _$GroupModelToJson(_GroupModel instance) =>
       'id': instance.id,
       'name': instance.name,
       'description': instance.description,
-      'memberIds': instance.memberIds,
+      'members': instance.members,
+      'linkedUserIds': instance.linkedUserIds,
       'createdBy': instance.createdBy,
-      'inviteCode': instance.inviteCode,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
     };

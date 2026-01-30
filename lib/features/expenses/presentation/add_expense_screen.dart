@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:splitdumb/core/extensions/context_extensions.dart';
-import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/expenses/domain/expense_model.dart';
 import 'package:splitdumb/features/expenses/providers/expense_providers.dart';
 import 'package:splitdumb/features/groups/providers/group_providers.dart';
@@ -25,7 +24,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
   SplitType _splitType = SplitType.equal;
   String? _selectedCategory;
-  String? _paidBy;
+  String? _paidBy; // This is now member ID
   DateTime _date = DateTime.now();
   Map<String, double> _customSplits = {};
   Map<String, bool> _selectedMembers = {};
@@ -50,7 +49,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(groupByIdProvider(widget.groupId));
-    final currentUser = ref.watch(authStateProvider).valueOrNull;
+    final currentMember = ref.watch(currentUserMemberProvider(widget.groupId));
     final expenseState = ref.watch(expenseNotifierProvider);
 
     ref.listen(expenseNotifierProvider, (previous, next) {
@@ -70,13 +69,13 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
           );
         }
 
-        // Initialize paidBy to current user
-        _paidBy ??= currentUser?.uid;
+        // Initialize paidBy to current member's ID
+        _paidBy ??= currentMember?.id;
 
         // Initialize selected members
         if (_selectedMembers.isEmpty) {
-          for (final memberId in group.memberIds) {
-            _selectedMembers[memberId] = true;
+          for (final member in group.members) {
+            _selectedMembers[member.id] = true;
           }
         }
 
@@ -174,15 +173,17 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: group.memberIds.map((memberId) {
-                    final isSelected = _paidBy == memberId;
-                    final isCurrentUser = memberId == currentUser?.uid;
+                  children: group.members.map((member) {
+                    final isSelected = _paidBy == member.id;
+                    final isCurrentUser = member.id == currentMember?.id;
                     return ChoiceChip(
-                      label: Text(isCurrentUser ? 'You' : 'Member'),
+                      label: Text(isCurrentUser
+                          ? 'You (${member.displayName})'
+                          : member.displayName),
                       selected: isSelected,
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() => _paidBy = memberId);
+                          setState(() => _paidBy = member.id);
                         }
                       },
                     );
@@ -221,7 +222,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                _buildSplitUI(group.memberIds, currentUser?.uid),
+                _buildSplitUI(group.members, currentMember?.id),
                 const SizedBox(height: 32),
                 FilledButton(
                   onPressed: expenseState.isLoading ? null : _saveExpense,
@@ -249,22 +250,26 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     );
   }
 
-  Widget _buildSplitUI(List<String> memberIds, String? currentUserId) {
+  Widget _buildSplitUI(
+      List<dynamic> members, String? currentMemberId) {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final selectedMemberIds =
-        _selectedMembers.entries.where((e) => e.value).map((e) => e.key).toList();
+    final selectedMemberIds = _selectedMembers.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .toList();
 
     switch (_splitType) {
       case SplitType.equal:
-        return _buildEqualSplitUI(memberIds, currentUserId, amount, selectedMemberIds);
+        return _buildEqualSplitUI(
+            members, currentMemberId, amount, selectedMemberIds);
       case SplitType.exact:
-        return _buildExactSplitUI(memberIds, currentUserId, amount);
+        return _buildExactSplitUI(members, currentMemberId, amount);
       case SplitType.percentage:
-        return _buildPercentageSplitUI(memberIds, currentUserId, amount);
+        return _buildPercentageSplitUI(members, currentMemberId, amount);
     }
   }
 
-  Widget _buildEqualSplitUI(List<String> memberIds, String? currentUserId,
+  Widget _buildEqualSplitUI(List<dynamic> members, String? currentMemberId,
       double amount, List<String> selectedMemberIds) {
     final perPerson =
         selectedMemberIds.isEmpty ? 0.0 : amount / selectedMemberIds.length;
@@ -277,18 +282,20 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
           style: context.textTheme.bodyMedium,
         ),
         const SizedBox(height: 8),
-        ...memberIds.map((memberId) {
-          final isSelected = _selectedMembers[memberId] ?? false;
-          final isCurrentUser = memberId == currentUserId;
+        ...members.map((member) {
+          final isSelected = _selectedMembers[member.id] ?? false;
+          final isCurrentUser = member.id == currentMemberId;
           return CheckboxListTile(
-            title: Text(isCurrentUser ? 'You' : 'Member'),
+            title: Text(isCurrentUser
+                ? 'You (${member.displayName})'
+                : member.displayName),
             subtitle: isSelected
                 ? Text('\$${perPerson.toStringAsFixed(2)}')
                 : null,
             value: isSelected,
             onChanged: (value) {
               setState(() {
-                _selectedMembers[memberId] = value ?? false;
+                _selectedMembers[member.id] = value ?? false;
                 _updateSplits();
               });
             },
@@ -299,7 +306,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   }
 
   Widget _buildExactSplitUI(
-      List<String> memberIds, String? currentUserId, double amount) {
+      List<dynamic> members, String? currentMemberId, double amount) {
     final totalSplit = _customSplits.values.fold(0.0, (a, b) => a + b);
     final remaining = amount - totalSplit;
 
@@ -325,26 +332,28 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        ...memberIds.map((memberId) {
-          final isCurrentUser = memberId == currentUserId;
+        ...members.map((member) {
+          final isCurrentUser = member.id == currentMemberId;
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: TextFormField(
-              initialValue: _customSplits[memberId]?.toStringAsFixed(2) ?? '',
+              initialValue: _customSplits[member.id]?.toStringAsFixed(2) ?? '',
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
               decoration: InputDecoration(
-                labelText: isCurrentUser ? 'You' : 'Member',
+                labelText: isCurrentUser
+                    ? 'You (${member.displayName})'
+                    : member.displayName,
                 prefixText: '\$ ',
                 isDense: true,
               ),
               onChanged: (value) {
                 final parsed = double.tryParse(value) ?? 0;
                 setState(() {
-                  _customSplits[memberId] = parsed;
+                  _customSplits[member.id] = parsed;
                 });
               },
             ),
@@ -355,7 +364,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   }
 
   Widget _buildPercentageSplitUI(
-      List<String> memberIds, String? currentUserId, double amount) {
+      List<dynamic> members, String? currentMemberId, double amount) {
     final totalPercentage = _customSplits.values.fold(0.0, (a, b) => a + b);
     final remaining = 100 - totalPercentage;
 
@@ -381,9 +390,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        ...memberIds.map((memberId) {
-          final isCurrentUser = memberId == currentUserId;
-          final percentage = _customSplits[memberId] ?? 0;
+        ...members.map((member) {
+          final isCurrentUser = member.id == currentMemberId;
+          final percentage = _customSplits[member.id] ?? 0;
           final calculatedAmount = amount * (percentage / 100);
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -391,20 +400,23 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: percentage > 0 ? percentage.toStringAsFixed(0) : '',
+                    initialValue:
+                        percentage > 0 ? percentage.toStringAsFixed(0) : '',
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                     ],
                     decoration: InputDecoration(
-                      labelText: isCurrentUser ? 'You' : 'Member',
+                      labelText: isCurrentUser
+                          ? 'You (${member.displayName})'
+                          : member.displayName,
                       suffixText: '%',
                       isDense: true,
                     ),
                     onChanged: (value) {
                       final parsed = double.tryParse(value) ?? 0;
                       setState(() {
-                        _customSplits[memberId] = parsed;
+                        _customSplits[member.id] = parsed;
                       });
                     },
                   ),

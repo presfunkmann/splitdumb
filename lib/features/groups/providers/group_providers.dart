@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/groups/data/group_repository.dart';
+import 'package:splitdumb/features/groups/domain/group_member.dart';
 import 'package:splitdumb/features/groups/domain/group_model.dart';
 
 final groupRepositoryProvider = Provider<GroupRepository>((ref) {
@@ -26,6 +27,45 @@ final groupByIdProvider =
 
 final selectedGroupProvider = StateProvider<GroupModel?>((ref) => null);
 
+/// Get the current user's member record in a specific group
+final currentUserMemberProvider =
+    Provider.family<GroupMember?, String>((ref, groupId) {
+  final groupAsync = ref.watch(groupByIdProvider(groupId));
+  final user = ref.watch(authStateProvider).valueOrNull;
+
+  if (user == null) return null;
+
+  final group = groupAsync.valueOrNull;
+  if (group == null) return null;
+
+  try {
+    return group.members.firstWhere(
+      (m) => m.linkedUserId == user.uid,
+    );
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Lookup a member's display name by their member ID within a group
+final memberDisplayNameProvider =
+    Provider.family<String, ({String groupId, String memberId})>(
+        (ref, params) {
+  final groupAsync = ref.watch(groupByIdProvider(params.groupId));
+  final group = groupAsync.valueOrNull;
+
+  if (group == null) return 'Member';
+
+  try {
+    final member = group.members.firstWhere(
+      (m) => m.id == params.memberId,
+    );
+    return member.displayName;
+  } catch (_) {
+    return 'Member';
+  }
+});
+
 class GroupNotifier extends StateNotifier<AsyncValue<GroupModel?>> {
   final GroupRepository _repository;
   final Ref _ref;
@@ -50,13 +90,14 @@ class GroupNotifier extends StateNotifier<AsyncValue<GroupModel?>> {
         name: name,
         description: description,
         createdBy: user.uid,
+        creatorDisplayName: user.displayName ?? user.email ?? 'User',
       );
     });
 
     return state.valueOrNull;
   }
 
-  Future<GroupModel?> joinGroupByCode(String inviteCode) async {
+  Future<GroupModel?> claimMemberByInviteCode(String inviteCode) async {
     state = const AsyncValue.loading();
     final authState = _ref.read(authStateProvider);
     final user = authState.valueOrNull;
@@ -66,31 +107,46 @@ class GroupNotifier extends StateNotifier<AsyncValue<GroupModel?>> {
     }
 
     state = await AsyncValue.guard(() async {
-      final group = await _repository.getGroupByInviteCode(inviteCode);
-      if (group == null) {
-        throw Exception('Invalid invite code');
-      }
-
-      if (group.memberIds.contains(user.uid)) {
-        return group;
-      }
-
-      return await _repository.joinGroup(
-        groupId: group.id,
+      final result = await _repository.claimMemberByInviteCode(
+        inviteCode: inviteCode,
         userId: user.uid,
       );
+      if (result == null) {
+        throw Exception('Invalid invite code');
+      }
+      return result.group;
     });
 
     return state.valueOrNull;
   }
 
-  Future<void> leaveGroup(String groupId) async {
+  Future<GroupMember?> addPlaceholderMember({
+    required String groupId,
+    required String displayName,
+  }) async {
+    try {
+      final member = await _repository.addPlaceholderMember(
+        groupId: groupId,
+        displayName: displayName,
+      );
+      _ref.invalidate(groupByIdProvider(groupId));
+      return member;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> leaveGroup({
+    required String groupId,
+    required String memberId,
+  }) async {
     final authState = _ref.read(authStateProvider);
     final user = authState.valueOrNull;
     if (user == null) return;
 
     await _repository.leaveGroup(
       groupId: groupId,
+      memberId: memberId,
       userId: user.uid,
     );
   }

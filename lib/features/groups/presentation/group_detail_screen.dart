@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:splitdumb/core/extensions/context_extensions.dart';
-import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/balances/providers/balance_providers.dart';
 import 'package:splitdumb/features/expenses/domain/expense_model.dart';
 import 'package:splitdumb/features/expenses/providers/expense_providers.dart';
@@ -21,6 +20,7 @@ class GroupDetailScreen extends ConsumerWidget {
     final groupAsync = ref.watch(groupByIdProvider(groupId));
     final expensesAsync = ref.watch(groupExpensesProvider(groupId));
     final balancesAsync = ref.watch(groupMemberBalancesProvider(groupId));
+    final currentMember = ref.watch(currentUserMemberProvider(groupId));
 
     return groupAsync.when(
       data: (group) {
@@ -37,7 +37,7 @@ class GroupDetailScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.share),
-                onPressed: () => _showInviteCode(context, group),
+                onPressed: () => _showInviteCodes(context, group, currentMember?.inviteCode),
               ),
               PopupMenuButton(
                 itemBuilder: (context) => [
@@ -76,7 +76,9 @@ class GroupDetailScreen extends ConsumerWidget {
                       context.push('/groups/$groupId/balances');
                       break;
                     case 'leave':
-                      _confirmLeaveGroup(context, ref, group);
+                      if (currentMember != null) {
+                        _confirmLeaveGroup(context, ref, group, currentMember.id);
+                      }
                       break;
                   }
                 },
@@ -85,14 +87,14 @@ class GroupDetailScreen extends ConsumerWidget {
           ),
           body: Column(
             children: [
-              _buildBalancesSummary(context, balancesAsync),
+              _buildBalancesSummary(context, balancesAsync, group),
               Expanded(
                 child: expensesAsync.when(
                   data: (expenses) {
                     if (expenses.isEmpty) {
                       return _buildEmptyState(context);
                     }
-                    return _buildExpensesList(context, ref, expenses);
+                    return _buildExpensesList(context, ref, expenses, group, currentMember?.id);
                   },
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
@@ -122,10 +124,23 @@ class GroupDetailScreen extends ConsumerWidget {
   Widget _buildBalancesSummary(
     BuildContext context,
     AsyncValue<Map<String, double>> balancesAsync,
+    GroupModel group,
   ) {
     return balancesAsync.when(
       data: (balances) {
         if (balances.isEmpty) return const SizedBox.shrink();
+
+        // Helper to get member display name
+        String getMemberName(String memberId) {
+          try {
+            final member = group.members.firstWhere(
+              (m) => m.id == memberId,
+            );
+            return member.displayName;
+          } catch (_) {
+            return 'Member';
+          }
+        }
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -150,6 +165,7 @@ class GroupDetailScreen extends ConsumerWidget {
                 runSpacing: 4,
                 children: balances.entries.map((entry) {
                   final isPositive = entry.value >= 0;
+                  final memberName = getMemberName(entry.key);
                   return Chip(
                     label: Text(
                       '${isPositive ? '+' : ''}\$${entry.value.abs().toStringAsFixed(2)}',
@@ -163,7 +179,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     avatar: CircleAvatar(
                       backgroundColor: context.colorScheme.primaryContainer,
                       child: Text(
-                        entry.key.substring(0, 1).toUpperCase(),
+                        memberName.substring(0, 1).toUpperCase(),
                         style: TextStyle(
                           fontSize: 12,
                           color: context.colorScheme.onPrimaryContainer,
@@ -217,6 +233,8 @@ class GroupDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     List<ExpenseModel> expenses,
+    GroupModel group,
+    String? currentMemberId,
   ) {
     final dateFormat = DateFormat.yMMMd();
     final groupedExpenses = <String, List<ExpenseModel>>{};
@@ -248,6 +266,8 @@ class GroupDetailScreen extends ConsumerWidget {
             ...dayExpenses.map((expense) => _ExpenseCard(
                   expense: expense,
                   groupId: groupId,
+                  group: group,
+                  currentMemberId: currentMemberId,
                 )),
           ],
         );
@@ -255,7 +275,7 @@ class GroupDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showInviteCode(BuildContext context, GroupModel group) {
+  void _showInviteCodes(BuildContext context, GroupModel group, String? myInviteCode) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -266,45 +286,61 @@ class GroupDetailScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Invite Code',
+                  'Share Invite Codes',
                   style: context.textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Share this code with friends to join ${group.name}',
+                  'Each member has their own invite code. Go to Settings to see all member codes or add new members.',
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+                if (myInviteCode != null) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Your Invite Code',
+                    style: context.textTheme.titleSmall,
                   ),
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    group.inviteCode,
-                    style: context.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                      color: context.colorScheme.onPrimaryContainer,
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      myInviteCode,
+                      style: context.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                        color: context.colorScheme.onPrimaryContainer,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                FilledButton.icon(
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: myInviteCode));
+                      Navigator.pop(context);
+                      context.showSnackBar('Your invite code copied!');
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy My Code'),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
                   onPressed: () {
-                    Clipboard.setData(ClipboardData(text: group.inviteCode));
                     Navigator.pop(context);
-                    context.showSnackBar('Invite code copied!');
+                    context.push('/groups/${group.id}/settings');
                   },
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy Code'),
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Manage Members'),
                 ),
               ],
             ),
@@ -315,7 +351,7 @@ class GroupDetailScreen extends ConsumerWidget {
   }
 
   void _confirmLeaveGroup(
-      BuildContext context, WidgetRef ref, GroupModel group) {
+      BuildContext context, WidgetRef ref, GroupModel group, String memberId) {
     showDialog(
       context: context,
       builder: (context) {
@@ -335,7 +371,7 @@ class GroupDetailScreen extends ConsumerWidget {
                 Navigator.pop(context);
                 await ref
                     .read(groupNotifierProvider.notifier)
-                    .leaveGroup(group.id);
+                    .leaveGroup(groupId: group.id, memberId: memberId);
                 if (context.mounted) {
                   context.go('/');
                 }
@@ -349,20 +385,35 @@ class GroupDetailScreen extends ConsumerWidget {
   }
 }
 
-class _ExpenseCard extends ConsumerWidget {
+class _ExpenseCard extends StatelessWidget {
   final ExpenseModel expense;
   final String groupId;
+  final GroupModel group;
+  final String? currentMemberId;
 
   const _ExpenseCard({
     required this.expense,
     required this.groupId,
+    required this.group,
+    required this.currentMemberId,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(authStateProvider).valueOrNull;
-    final isPayer = expense.paidBy == currentUser?.uid;
-    final userShare = expense.splits[currentUser?.uid] ?? 0;
+  Widget build(BuildContext context) {
+    final isPayer = expense.paidBy == currentMemberId;
+    final userShare = expense.splits[currentMemberId] ?? 0;
+
+    // Get payer's display name
+    String getPayerName() {
+      try {
+        final member = group.members.firstWhere(
+          (m) => m.id == expense.paidBy,
+        );
+        return member.displayName;
+      } catch (_) {
+        return 'Someone';
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -391,7 +442,7 @@ class _ExpenseCard extends ConsumerWidget {
                       style: context.textTheme.titleMedium,
                     ),
                     Text(
-                      isPayer ? 'You paid' : 'Paid by someone',
+                      isPayer ? 'You paid' : 'Paid by ${getPayerName()}',
                       style: context.textTheme.bodySmall?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),

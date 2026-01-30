@@ -14,20 +14,30 @@ service cloud.firestore {
 
     // Groups collection
     match /groups/{groupId} {
-      // Allow read if user is a member of the group
-      allow read: if isAuthenticated() && userId() in resource.data.memberIds;
+      // Allow read if user is a linked member of the group
+      allow read: if isAuthenticated() && userId() in resource.data.linkedUserIds;
 
-      // Allow create if authenticated (creator will be added as member)
-      allow create: if isAuthenticated() && userId() in request.resource.data.memberIds;
+      // Allow create if authenticated (creator will be added as linked member)
+      allow create: if isAuthenticated() && userId() in request.resource.data.linkedUserIds;
 
-      // Allow update if user is a member (for joining) or creator (for editing)
+      // Allow update if user is a linked member (for editing or joining)
       allow update: if isAuthenticated() && (
-        userId() in resource.data.memberIds ||
-        userId() in request.resource.data.memberIds
+        userId() in resource.data.linkedUserIds ||
+        userId() in request.resource.data.linkedUserIds
       );
 
       // Allow delete only if user is the creator
       allow delete: if isAuthenticated() && userId() == resource.data.createdBy;
+    }
+
+    // Invite codes collection - for O(1) lookup of invite codes
+    match /inviteCodes/{code} {
+      // Allow read to any authenticated user (needed to claim invite codes)
+      allow read: if isAuthenticated();
+
+      // Allow create/delete only through server-side operations or group member operations
+      // In practice, these are managed by the group repository when adding/removing members
+      allow create, delete: if isAuthenticated();
     }
 
     // Expenses collection

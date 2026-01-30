@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupModel {
 
- String get id; String get name; String? get description; List<String> get memberIds; String get createdBy; String get inviteCode;@TimestampConverter() DateTime get createdAt;
+ String get id; String get name; String? get description; List<GroupMember> get members; List<String> get linkedUserIds; String get createdBy;@TimestampConverter() DateTime get createdAt;
 /// Create a copy of GroupModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $GroupModelCopyWith<GroupModel> get copyWith => _$GroupModelCopyWithImpl<GroupMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other.memberIds, memberIds)&&(identical(other.createdBy, createdBy) || other.createdBy == createdBy)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other.members, members)&&const DeepCollectionEquality().equals(other.linkedUserIds, linkedUserIds)&&(identical(other.createdBy, createdBy) || other.createdBy == createdBy)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,const DeepCollectionEquality().hash(memberIds),createdBy,inviteCode,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,description,const DeepCollectionEquality().hash(members),const DeepCollectionEquality().hash(linkedUserIds),createdBy,createdAt);
 
 @override
 String toString() {
-  return 'GroupModel(id: $id, name: $name, description: $description, memberIds: $memberIds, createdBy: $createdBy, inviteCode: $inviteCode, createdAt: $createdAt)';
+  return 'GroupModel(id: $id, name: $name, description: $description, members: $members, linkedUserIds: $linkedUserIds, createdBy: $createdBy, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $GroupModelCopyWith<$Res>  {
   factory $GroupModelCopyWith(GroupModel value, $Res Function(GroupModel) _then) = _$GroupModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? description, List<String> memberIds, String createdBy, String inviteCode,@TimestampConverter() DateTime createdAt
+ String id, String name, String? description, List<GroupMember> members, List<String> linkedUserIds, String createdBy,@TimestampConverter() DateTime createdAt
 });
 
 
@@ -65,14 +65,14 @@ class _$GroupModelCopyWithImpl<$Res>
 
 /// Create a copy of GroupModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? memberIds = null,Object? createdBy = null,Object? inviteCode = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? members = null,Object? linkedUserIds = null,Object? createdBy = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,memberIds: null == memberIds ? _self.memberIds : memberIds // ignore: cast_nullable_to_non_nullable
+as String?,members: null == members ? _self.members : members // ignore: cast_nullable_to_non_nullable
+as List<GroupMember>,linkedUserIds: null == linkedUserIds ? _self.linkedUserIds : linkedUserIds // ignore: cast_nullable_to_non_nullable
 as List<String>,createdBy: null == createdBy ? _self.createdBy : createdBy // ignore: cast_nullable_to_non_nullable
-as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
@@ -159,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  List<String> memberIds,  String createdBy,  String inviteCode, @TimestampConverter()  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  List<GroupMember> members,  List<String> linkedUserIds,  String createdBy, @TimestampConverter()  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupModel() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.createdBy,_that.inviteCode,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.description,_that.members,_that.linkedUserIds,_that.createdBy,_that.createdAt);case _:
   return orElse();
 
 }
@@ -180,10 +180,10 @@ return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.crea
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  List<String> memberIds,  String createdBy,  String inviteCode, @TimestampConverter()  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  List<GroupMember> members,  List<String> linkedUserIds,  String createdBy, @TimestampConverter()  DateTime createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _GroupModel():
-return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.createdBy,_that.inviteCode,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.description,_that.members,_that.linkedUserIds,_that.createdBy,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +200,10 @@ return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.crea
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  List<String> memberIds,  String createdBy,  String inviteCode, @TimestampConverter()  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  List<GroupMember> members,  List<String> linkedUserIds,  String createdBy, @TimestampConverter()  DateTime createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupModel() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.createdBy,_that.inviteCode,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.description,_that.members,_that.linkedUserIds,_that.createdBy,_that.createdAt);case _:
   return null;
 
 }
@@ -215,21 +215,27 @@ return $default(_that.id,_that.name,_that.description,_that.memberIds,_that.crea
 @JsonSerializable()
 
 class _GroupModel implements GroupModel {
-  const _GroupModel({required this.id, required this.name, this.description, required final  List<String> memberIds, required this.createdBy, required this.inviteCode, @TimestampConverter() required this.createdAt}): _memberIds = memberIds;
+  const _GroupModel({required this.id, required this.name, this.description, required final  List<GroupMember> members, required final  List<String> linkedUserIds, required this.createdBy, @TimestampConverter() required this.createdAt}): _members = members,_linkedUserIds = linkedUserIds;
   factory _GroupModel.fromJson(Map<String, dynamic> json) => _$GroupModelFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override final  String? description;
- final  List<String> _memberIds;
-@override List<String> get memberIds {
-  if (_memberIds is EqualUnmodifiableListView) return _memberIds;
+ final  List<GroupMember> _members;
+@override List<GroupMember> get members {
+  if (_members is EqualUnmodifiableListView) return _members;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_memberIds);
+  return EqualUnmodifiableListView(_members);
+}
+
+ final  List<String> _linkedUserIds;
+@override List<String> get linkedUserIds {
+  if (_linkedUserIds is EqualUnmodifiableListView) return _linkedUserIds;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_linkedUserIds);
 }
 
 @override final  String createdBy;
-@override final  String inviteCode;
 @override@TimestampConverter() final  DateTime createdAt;
 
 /// Create a copy of GroupModel
@@ -245,16 +251,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other._memberIds, _memberIds)&&(identical(other.createdBy, createdBy) || other.createdBy == createdBy)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other._members, _members)&&const DeepCollectionEquality().equals(other._linkedUserIds, _linkedUserIds)&&(identical(other.createdBy, createdBy) || other.createdBy == createdBy)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,const DeepCollectionEquality().hash(_memberIds),createdBy,inviteCode,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,description,const DeepCollectionEquality().hash(_members),const DeepCollectionEquality().hash(_linkedUserIds),createdBy,createdAt);
 
 @override
 String toString() {
-  return 'GroupModel(id: $id, name: $name, description: $description, memberIds: $memberIds, createdBy: $createdBy, inviteCode: $inviteCode, createdAt: $createdAt)';
+  return 'GroupModel(id: $id, name: $name, description: $description, members: $members, linkedUserIds: $linkedUserIds, createdBy: $createdBy, createdAt: $createdAt)';
 }
 
 
@@ -265,7 +271,7 @@ abstract mixin class _$GroupModelCopyWith<$Res> implements $GroupModelCopyWith<$
   factory _$GroupModelCopyWith(_GroupModel value, $Res Function(_GroupModel) _then) = __$GroupModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? description, List<String> memberIds, String createdBy, String inviteCode,@TimestampConverter() DateTime createdAt
+ String id, String name, String? description, List<GroupMember> members, List<String> linkedUserIds, String createdBy,@TimestampConverter() DateTime createdAt
 });
 
 
@@ -282,14 +288,14 @@ class __$GroupModelCopyWithImpl<$Res>
 
 /// Create a copy of GroupModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? memberIds = null,Object? createdBy = null,Object? inviteCode = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? members = null,Object? linkedUserIds = null,Object? createdBy = null,Object? createdAt = null,}) {
   return _then(_GroupModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,memberIds: null == memberIds ? _self._memberIds : memberIds // ignore: cast_nullable_to_non_nullable
+as String?,members: null == members ? _self._members : members // ignore: cast_nullable_to_non_nullable
+as List<GroupMember>,linkedUserIds: null == linkedUserIds ? _self._linkedUserIds : linkedUserIds // ignore: cast_nullable_to_non_nullable
 as List<String>,createdBy: null == createdBy ? _self.createdBy : createdBy // ignore: cast_nullable_to_non_nullable
-as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));

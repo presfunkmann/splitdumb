@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:splitdumb/core/extensions/context_extensions.dart';
-import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/balances/providers/balance_providers.dart';
 import 'package:splitdumb/features/groups/providers/group_providers.dart';
 
@@ -14,7 +13,7 @@ class GroupBalancesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupAsync = ref.watch(groupByIdProvider(groupId));
     final debtsAsync = ref.watch(groupDebtsProvider(groupId));
-    final currentUser = ref.watch(authStateProvider).valueOrNull;
+    final currentMember = ref.watch(currentUserMemberProvider(groupId));
 
     return Scaffold(
       appBar: AppBar(
@@ -32,18 +31,32 @@ class GroupBalancesScreen extends ConsumerWidget {
                 return _buildSettledState(context);
               }
 
+              final currentMemberId = currentMember?.id;
+
               // Separate into you owe and you are owed
               final youOwe = debts
-                  .where((d) => d.fromUserId == currentUser?.uid)
+                  .where((d) => d.fromUserId == currentMemberId)
                   .toList();
               final youAreOwed = debts
-                  .where((d) => d.toUserId == currentUser?.uid)
+                  .where((d) => d.toUserId == currentMemberId)
                   .toList();
               final otherDebts = debts
                   .where((d) =>
-                      d.fromUserId != currentUser?.uid &&
-                      d.toUserId != currentUser?.uid)
+                      d.fromUserId != currentMemberId &&
+                      d.toUserId != currentMemberId)
                   .toList();
+
+              // Helper to get member display name
+              String getMemberName(String memberId) {
+                try {
+                  final member = group.members.firstWhere(
+                    (m) => m.id == memberId,
+                  );
+                  return member.displayName;
+                } catch (_) {
+                  return 'Member';
+                }
+              }
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -54,6 +67,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                           context,
                           ref,
                           debt,
+                          getMemberName(debt.toUserId),
                           isYouOwe: true,
                         )),
                     const SizedBox(height: 24),
@@ -64,6 +78,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                           context,
                           ref,
                           debt,
+                          getMemberName(debt.fromUserId),
                           isYouOwe: false,
                         )),
                     const SizedBox(height: 24),
@@ -74,6 +89,8 @@ class GroupBalancesScreen extends ConsumerWidget {
                     ...otherDebts.map((debt) => _buildOtherDebtCard(
                           context,
                           debt,
+                          getMemberName(debt.fromUserId),
+                          getMemberName(debt.toUserId),
                         )),
                   ],
                 ],
@@ -149,7 +166,8 @@ class GroupBalancesScreen extends ConsumerWidget {
   Widget _buildDebtCard(
     BuildContext context,
     WidgetRef ref,
-    DebtInfo debt, {
+    DebtInfo debt,
+    String otherMemberName, {
     required bool isYouOwe,
   }) {
     return Card(
@@ -179,7 +197,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    'Member',
+                    otherMemberName,
                     style: context.textTheme.titleMedium,
                   ),
                 ],
@@ -201,6 +219,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                       context,
                       ref,
                       debt,
+                      otherMemberName,
                     ),
                     child: const Text('Settle'),
                   ),
@@ -212,7 +231,12 @@ class GroupBalancesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOtherDebtCard(BuildContext context, DebtInfo debt) {
+  Widget _buildOtherDebtCard(
+    BuildContext context,
+    DebtInfo debt,
+    String fromName,
+    String toName,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: context.colorScheme.surfaceContainerHighest.withAlpha(50),
@@ -223,19 +247,33 @@ class GroupBalancesScreen extends ConsumerWidget {
             CircleAvatar(
               backgroundColor: context.colorScheme.surfaceContainerHighest,
               child: Text(
-                debt.fromUserId.substring(0, 1).toUpperCase(),
+                fromName.substring(0, 1).toUpperCase(),
               ),
             ),
             const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                fromName,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const Icon(Icons.arrow_forward, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                toName,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+              ),
+            ),
             const SizedBox(width: 8),
             CircleAvatar(
               backgroundColor: context.colorScheme.surfaceContainerHighest,
               child: Text(
-                debt.toUserId.substring(0, 1).toUpperCase(),
+                toName.substring(0, 1).toUpperCase(),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 16),
             Text(
               '\$${debt.amount.toStringAsFixed(2)}',
               style: context.textTheme.titleMedium,
@@ -250,6 +288,7 @@ class GroupBalancesScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     DebtInfo debt,
+    String toMemberName,
   ) {
     final amountController =
         TextEditingController(text: debt.amount.toStringAsFixed(2));
@@ -263,7 +302,7 @@ class GroupBalancesScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('How much are you paying?'),
+              Text('How much are you paying $toMemberName?'),
               const SizedBox(height: 16),
               TextField(
                 controller: amountController,

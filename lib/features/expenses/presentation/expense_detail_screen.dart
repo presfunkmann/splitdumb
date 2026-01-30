@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:splitdumb/core/extensions/context_extensions.dart';
-import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/expenses/domain/expense_model.dart';
 import 'package:splitdumb/features/expenses/providers/expense_providers.dart';
+import 'package:splitdumb/features/groups/providers/group_providers.dart';
 
 class ExpenseDetailScreen extends ConsumerWidget {
   final String groupId;
@@ -20,7 +20,8 @@ class ExpenseDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final expenseAsync = ref.watch(expenseByIdProvider(expenseId));
-    final currentUser = ref.watch(authStateProvider).valueOrNull;
+    final groupAsync = ref.watch(groupByIdProvider(groupId));
+    final currentMember = ref.watch(currentUserMemberProvider(groupId));
 
     return expenseAsync.when(
       data: (expense) {
@@ -31,14 +32,31 @@ class ExpenseDetailScreen extends ConsumerWidget {
           );
         }
 
-        final isCreator = expense.paidBy == currentUser?.uid;
+        final group = groupAsync.valueOrNull;
+        final currentMemberId = currentMember?.id;
+        final isPayer = expense.paidBy == currentMemberId;
         final dateFormat = DateFormat.yMMMMd();
+
+        // Helper to get member display name
+        String getMemberName(String memberId) {
+          if (group == null) return 'Member';
+          try {
+            final member = group.members.firstWhere(
+              (m) => m.id == memberId,
+            );
+            return member.displayName;
+          } catch (_) {
+            return 'Member';
+          }
+        }
+
+        final payerName = getMemberName(expense.paidBy);
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Expense Details'),
             actions: [
-              if (isCreator)
+              if (isPayer)
                 PopupMenuButton(
                   itemBuilder: (context) => [
                     const PopupMenuItem(
@@ -130,10 +148,10 @@ class ExpenseDetailScreen extends ConsumerWidget {
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
                           child: Text(
-                            expense.paidBy.substring(0, 1).toUpperCase(),
+                            payerName.substring(0, 1).toUpperCase(),
                           ),
                         ),
-                        title: Text(isCreator ? 'You' : 'Member'),
+                        title: Text(isPayer ? 'You ($payerName)' : payerName),
                         trailing: Text(
                           '\$${expense.amount.toStringAsFixed(2)}',
                           style: context.textTheme.titleMedium?.copyWith(
@@ -166,22 +184,23 @@ class ExpenseDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       ...expense.splits.entries.map((entry) {
-                        final isCurrentUser = entry.key == currentUser?.uid;
-                        final isPayer = entry.key == expense.paidBy;
+                        final memberName = getMemberName(entry.key);
+                        final isCurrentUser = entry.key == currentMemberId;
+                        final isMemberPayer = entry.key == expense.paidBy;
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
                             backgroundColor:
                                 context.colorScheme.secondaryContainer,
                             child: Text(
-                              entry.key.substring(0, 1).toUpperCase(),
+                              memberName.substring(0, 1).toUpperCase(),
                               style: TextStyle(
                                 color:
                                     context.colorScheme.onSecondaryContainer,
                               ),
                             ),
                           ),
-                          title: Text(isCurrentUser ? 'You' : 'Member'),
+                          title: Text(isCurrentUser ? 'You ($memberName)' : memberName),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -190,7 +209,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
                                 '\$${entry.value.toStringAsFixed(2)}',
                                 style: context.textTheme.titleSmall,
                               ),
-                              if (isPayer)
+                              if (isMemberPayer)
                                 Text(
                                   'Gets back \$${(expense.amount - entry.value).toStringAsFixed(2)}',
                                   style: context.textTheme.bodySmall?.copyWith(
