@@ -106,6 +106,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                     expenseId: expenseId,
                   );
                 },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final groupId = state.pathParameters['groupId']!;
+                      final expenseId = state.pathParameters['expenseId']!;
+                      return AddExpenseScreen(
+                        groupId: groupId,
+                        expenseId: expenseId,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

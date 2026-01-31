@@ -10,8 +10,13 @@ import 'package:splitdumb/features/groups/providers/group_providers.dart';
 
 class AddExpenseScreen extends ConsumerStatefulWidget {
   final String groupId;
+  final String? expenseId; // If provided, we're editing
 
-  const AddExpenseScreen({super.key, required this.groupId});
+  const AddExpenseScreen({
+    super.key,
+    required this.groupId,
+    this.expenseId,
+  });
 
   @override
   ConsumerState<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -24,10 +29,13 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
   SplitType _splitType = SplitType.equal;
   String? _selectedCategory;
-  String? _paidBy; // This is now member ID
+  String? _paidBy;
   DateTime _date = DateTime.now();
   Map<String, double> _customSplits = {};
   Map<String, bool> _selectedMembers = {};
+  bool _initialized = false;
+
+  bool get _isEditing => widget.expenseId != null;
 
   final _categories = [
     'Food',
@@ -46,11 +54,34 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     super.dispose();
   }
 
+  void _initializeFromExpense(ExpenseModel expense) {
+    if (_initialized) return;
+    _initialized = true;
+
+    _descriptionController.text = expense.description;
+    _amountController.text = expense.amount.toStringAsFixed(2);
+    _splitType = expense.splitType;
+    _selectedCategory = expense.category;
+    _paidBy = expense.paidBy;
+    _date = expense.date;
+    _customSplits = Map.from(expense.splits);
+
+    // For equal splits, mark which members are selected
+    for (final memberId in expense.splits.keys) {
+      _selectedMembers[memberId] = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(groupByIdProvider(widget.groupId));
     final currentMember = ref.watch(currentUserMemberProvider(widget.groupId));
     final expenseState = ref.watch(expenseNotifierProvider);
+
+    // Load existing expense if editing
+    final existingExpenseAsync = _isEditing
+        ? ref.watch(expenseByIdProvider(widget.expenseId!))
+        : null;
 
     ref.listen(expenseNotifierProvider, (previous, next) {
       next.whenOrNull(
@@ -64,194 +95,222 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
       data: (group) {
         if (group == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Add Expense')),
+            appBar: AppBar(title: Text(_isEditing ? 'Edit Expense' : 'Add Expense')),
             body: const Center(child: Text('Group not found')),
           );
         }
 
-        // Initialize paidBy to current member's ID
-        _paidBy ??= currentMember?.id;
+        // If editing, wait for expense to load
+        if (_isEditing && existingExpenseAsync != null) {
+          return existingExpenseAsync.when(
+            data: (expense) {
+              if (expense == null) {
+                return Scaffold(
+                  appBar: AppBar(title: const Text('Edit Expense')),
+                  body: const Center(child: Text('Expense not found')),
+                );
+              }
+              _initializeFromExpense(expense);
+              return _buildForm(context, group, currentMember, expenseState);
+            },
+            loading: () => Scaffold(
+              appBar: AppBar(title: const Text('Edit Expense')),
+              body: const Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => Scaffold(
+              appBar: AppBar(title: const Text('Edit Expense')),
+              body: Center(child: Text('Error: $error')),
+            ),
+          );
+        }
 
-        // Initialize selected members
+        // Initialize for new expense
+        _paidBy ??= currentMember?.id;
         if (_selectedMembers.isEmpty) {
           for (final member in group.members) {
             _selectedMembers[member.id] = true;
           }
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Add Expense'),
-          ),
-          body: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                TextFormField(
-                  controller: _amountController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: '\$ ',
-                    prefixIcon: const Icon(Icons.attach_money),
-                    filled: true,
-                    fillColor: context.colorScheme.surfaceContainerHighest,
-                  ),
-                  style: context.textTheme.headlineMedium,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an amount';
-                    }
-                    final amount = double.tryParse(value);
-                    if (amount == null || amount <= 0) {
-                      return 'Please enter a valid amount';
-                    }
-                    return null;
-                  },
-                  onChanged: (_) => _updateSplits(),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'What was this for?',
-                    prefixIcon: Icon(Icons.description_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter a description';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedCategory = value);
-                  },
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today),
-                  title: const Text('Date'),
-                  subtitle: Text(DateFormat.yMMMd().format(_date)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _date,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      setState(() => _date = picked);
-                    }
-                  },
-                ),
-                const Divider(height: 32),
-                Text(
-                  'Paid by',
-                  style: context.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: group.members.map((member) {
-                    final isSelected = _paidBy == member.id;
-                    final isCurrentUser = member.id == currentMember?.id;
-                    return ChoiceChip(
-                      label: Text(isCurrentUser
-                          ? 'You (${member.displayName})'
-                          : member.displayName),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() => _paidBy = member.id);
-                        }
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Split type',
-                  style: context.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<SplitType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: SplitType.equal,
-                      label: Text('Equal'),
-                      icon: Icon(Icons.balance),
-                    ),
-                    ButtonSegment(
-                      value: SplitType.exact,
-                      label: Text('Exact'),
-                      icon: Icon(Icons.edit),
-                    ),
-                    ButtonSegment(
-                      value: SplitType.percentage,
-                      label: Text('%'),
-                      icon: Icon(Icons.percent),
-                    ),
-                  ],
-                  selected: {_splitType},
-                  onSelectionChanged: (selected) {
-                    setState(() {
-                      _splitType = selected.first;
-                      _updateSplits();
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildSplitUI(group.members, currentMember?.id),
-                const SizedBox(height: 32),
-                FilledButton(
-                  onPressed: expenseState.isLoading ? null : _saveExpense,
-                  child: expenseState.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save Expense'),
-                ),
-              ],
-            ),
-          ),
-        );
+        return _buildForm(context, group, currentMember, expenseState);
       },
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Add Expense')),
+        appBar: AppBar(title: Text(_isEditing ? 'Edit Expense' : 'Add Expense')),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
-        appBar: AppBar(title: const Text('Add Expense')),
+        appBar: AppBar(title: Text(_isEditing ? 'Edit Expense' : 'Add Expense')),
         body: Center(child: Text('Error: $error')),
       ),
     );
   }
 
-  Widget _buildSplitUI(
-      List<dynamic> members, String? currentMemberId) {
+  Widget _buildForm(
+    BuildContext context,
+    dynamic group,
+    dynamic currentMember,
+    AsyncValue<ExpenseModel?> expenseState,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Expense' : 'Add Expense'),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              controller: _amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                prefixText: '\$ ',
+                prefixIcon: const Icon(Icons.attach_money),
+                filled: true,
+                fillColor: context.colorScheme.surfaceContainerHighest,
+              ),
+              style: context.textTheme.headlineMedium,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter an amount';
+                }
+                final amount = double.tryParse(value);
+                if (amount == null || amount <= 0) {
+                  return 'Please enter a valid amount';
+                }
+                return null;
+              },
+              onChanged: (_) => _updateSplits(),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _descriptionController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'What was this for?',
+                prefixIcon: Icon(Icons.description_outlined),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter a description';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedCategory,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                prefixIcon: Icon(Icons.category_outlined),
+              ),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() => _selectedCategory = value);
+              },
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Date'),
+              subtitle: Text(DateFormat.yMMMd().format(_date)),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _date,
+                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() => _date = picked);
+                }
+              },
+            ),
+            const Divider(height: 32),
+            Text(
+              'Paid by',
+              style: context.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: group.members.map<Widget>((member) {
+                final isSelected = _paidBy == member.id;
+                final isCurrentUser = member.id == currentMember?.id;
+                return ChoiceChip(
+                  label: Text(isCurrentUser
+                      ? 'You (${member.displayName})'
+                      : member.displayName),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _paidBy = member.id);
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Split type',
+              style: context.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<SplitType>(
+              segments: const [
+                ButtonSegment(
+                  value: SplitType.equal,
+                  label: Text('Equal'),
+                  icon: Icon(Icons.balance),
+                ),
+                ButtonSegment(
+                  value: SplitType.exact,
+                  label: Text('Exact'),
+                  icon: Icon(Icons.edit),
+                ),
+                ButtonSegment(
+                  value: SplitType.percentage,
+                  label: Text('%'),
+                  icon: Icon(Icons.percent),
+                ),
+              ],
+              selected: {_splitType},
+              onSelectionChanged: (selected) {
+                setState(() {
+                  _splitType = selected.first;
+                  _updateSplits();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildSplitUI(group.members, currentMember?.id),
+            const SizedBox(height: 32),
+            FilledButton(
+              onPressed: expenseState.isLoading ? null : _saveExpense,
+              child: expenseState.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEditing ? 'Update Expense' : 'Save Expense'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSplitUI(List<dynamic> members, String? currentMemberId) {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final selectedMemberIds = _selectedMembers.entries
         .where((e) => e.value)
@@ -289,9 +348,8 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             title: Text(isCurrentUser
                 ? 'You (${member.displayName})'
                 : member.displayName),
-            subtitle: isSelected
-                ? Text('\$${perPerson.toStringAsFixed(2)}')
-                : null,
+            subtitle:
+                isSelected ? Text('\$${perPerson.toStringAsFixed(2)}') : null,
             value: isSelected,
             onChanged: (value) {
               setState(() {
@@ -441,21 +499,23 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   }
 
   void _updateSplits() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
+    setState(() {
+      final amount = double.tryParse(_amountController.text) ?? 0;
 
-    if (_splitType == SplitType.equal) {
-      final selectedMemberIds = _selectedMembers.entries
-          .where((e) => e.value)
-          .map((e) => e.key)
-          .toList();
+      if (_splitType == SplitType.equal) {
+        final selectedMemberIds = _selectedMembers.entries
+            .where((e) => e.value)
+            .map((e) => e.key)
+            .toList();
 
-      if (selectedMemberIds.isNotEmpty) {
-        _customSplits = SplitCalculator.calculateEqualSplit(
-          amount,
-          selectedMemberIds,
-        );
+        if (selectedMemberIds.isNotEmpty) {
+          _customSplits = SplitCalculator.calculateEqualSplit(
+            amount,
+            selectedMemberIds,
+          );
+        }
       }
-    }
+    });
   }
 
   Future<void> _saveExpense() async {
@@ -476,7 +536,8 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
         splits = Map.from(_customSplits);
         break;
       case SplitType.percentage:
-        splits = SplitCalculator.calculatePercentageSplit(amount, _customSplits);
+        splits =
+            SplitCalculator.calculatePercentageSplit(amount, _customSplits);
         break;
     }
 
@@ -485,21 +546,41 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
       return;
     }
 
-    final expense =
-        await ref.read(expenseNotifierProvider.notifier).createExpenseWithPayer(
-              groupId: widget.groupId,
-              description: _descriptionController.text.trim(),
-              amount: amount,
-              paidBy: _paidBy!,
-              splitType: _splitType,
-              splits: splits,
-              category: _selectedCategory,
-              date: _date,
-            );
+    if (_isEditing) {
+      final expense =
+          await ref.read(expenseNotifierProvider.notifier).updateExpense(
+                expenseId: widget.expenseId!,
+                description: _descriptionController.text.trim(),
+                amount: amount,
+                paidBy: _paidBy!,
+                splitType: _splitType,
+                splits: splits,
+                category: _selectedCategory,
+                date: _date,
+              );
 
-    if (expense != null && mounted) {
-      context.showSnackBar('Expense added!');
-      context.pop();
+      if (expense != null && mounted) {
+        context.showSnackBar('Expense updated!');
+        context.pop();
+      }
+    } else {
+      final expense = await ref
+          .read(expenseNotifierProvider.notifier)
+          .createExpenseWithPayer(
+            groupId: widget.groupId,
+            description: _descriptionController.text.trim(),
+            amount: amount,
+            paidBy: _paidBy!,
+            splitType: _splitType,
+            splits: splits,
+            category: _selectedCategory,
+            date: _date,
+          );
+
+      if (expense != null && mounted) {
+        context.showSnackBar('Expense added!');
+        context.pop();
+      }
     }
   }
 }

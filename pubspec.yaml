@@ -1,7 +1,7 @@
 name: splitdumb
 description: "Expense splitting app for friends and groups"
 publish_to: 'none'
-version: 1.0.0+3
+version: 1.0.0+4
 
 environment:
   sdk: ^3.10.7
