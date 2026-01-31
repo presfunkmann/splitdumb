@@ -143,48 +143,108 @@ class GroupDetailScreen extends ConsumerWidget {
         }
 
         return Container(
+          margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: context.colorScheme.surfaceContainerHighest.withAlpha(50),
-            border: Border(
-              bottom: BorderSide(
-                color: context.colorScheme.outlineVariant,
-              ),
-            ),
+            color: context.colorScheme.surfaceContainerHighest.withAlpha(80),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Member Balances',
-                style: context.textTheme.titleSmall,
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 18,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Member Balances',
+                      style: context.textTheme.titleSmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => context.push('/groups/$groupId/balances'),
+                    icon: const Icon(Icons.handshake_outlined, size: 18),
+                    label: const Text('Settle Up'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                runSpacing: 4,
+                runSpacing: 8,
                 children: balances.entries.map((entry) {
                   final isPositive = entry.value >= 0;
                   final memberName = getMemberName(entry.key);
-                  return Chip(
-                    label: Text(
-                      '${isPositive ? '+' : ''}\$${entry.value.abs().toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: entry.value == 0
-                            ? null
-                            : (isPositive ? Colors.green : Colors.red),
-                        fontWeight: FontWeight.w500,
+                  final isSettled = entry.value == 0;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSettled
+                          ? context.colorScheme.surface
+                          : (isPositive ? Colors.green : Colors.red).withAlpha(15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSettled
+                            ? context.colorScheme.outlineVariant.withAlpha(80)
+                            : (isPositive ? Colors.green : Colors.red).withAlpha(40),
                       ),
                     ),
-                    avatar: CircleAvatar(
-                      backgroundColor: context.colorScheme.primaryContainer,
-                      child: Text(
-                        memberName.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colorScheme.onPrimaryContainer,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.primary.withAlpha(25),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              memberName.substring(0, 1).toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: context.colorScheme.primary,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              memberName,
+                              style: context.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              isSettled
+                                  ? 'Settled'
+                                  : '${isPositive ? '+' : ''}\$${entry.value.abs().toStringAsFixed(2)}',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: isSettled
+                                    ? context.colorScheme.onSurfaceVariant
+                                    : (isPositive ? Colors.green.shade700 : Colors.red.shade700),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
@@ -193,7 +253,10 @@ class GroupDetailScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const LinearProgressIndicator(),
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: LinearProgressIndicator(),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -205,23 +268,37 @@ class GroupDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 80,
-              color: context.colorScheme.onSurfaceVariant,
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: context.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 48,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               'No expenses yet',
               style: context.textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first expense to start splitting',
+              'Add your first expense to start\nsplitting costs with your group',
               style: context.textTheme.bodyMedium?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () => context.push('/groups/$groupId/expenses/add'),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Expense'),
             ),
           ],
         ),
@@ -415,24 +492,31 @@ class _ExpenseCard extends StatelessWidget {
       }
     }
 
+    final categoryColor = _getCategoryColor(expense.category);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
         onTap: () => context.push('/groups/$groupId/expenses/${expense.id}'),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor:
-                    _getCategoryColor(expense.category).withAlpha(50),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: categoryColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(
                   _getCategoryIcon(expense.category),
-                  color: _getCategoryColor(expense.category),
+                  color: categoryColor,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,16 +524,18 @@ class _ExpenseCard extends StatelessWidget {
                     Text(
                       expense.description,
                       style: context.textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       isPayer ? 'You paid' : 'Paid by ${getPayerName()}',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.onSurfaceVariant,
-                      ),
+                      style: context.textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -459,20 +545,23 @@ class _ExpenseCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (isPayer)
-                    Text(
-                      'You get \$${(expense.amount - userShare).toStringAsFixed(2)}',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: Colors.green,
-                      ),
-                    )
-                  else
-                    Text(
-                      'You owe \$${userShare.toStringAsFixed(2)}',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: Colors.red,
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (isPayer ? Colors.green : Colors.red).withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isPayer
+                          ? '+\$${(expense.amount - userShare).toStringAsFixed(2)}'
+                          : '-\$${userShare.toStringAsFixed(2)}',
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: isPayer ? Colors.green.shade700 : Colors.red.shade700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ),
                 ],
               ),
             ],
@@ -504,19 +593,19 @@ class _ExpenseCard extends StatelessWidget {
   Color _getCategoryColor(String? category) {
     switch (category?.toLowerCase()) {
       case 'food':
-        return Colors.orange;
+        return const Color(0xFFF97316); // Orange
       case 'transport':
-        return Colors.blue;
+        return const Color(0xFF3B82F6); // Blue
       case 'entertainment':
-        return Colors.purple;
+        return const Color(0xFF8B5CF6); // Violet
       case 'shopping':
-        return Colors.pink;
+        return const Color(0xFFEC4899); // Pink
       case 'utilities':
-        return Colors.yellow.shade700;
+        return const Color(0xFFF59E0B); // Amber
       case 'rent':
-        return Colors.teal;
+        return const Color(0xFF0D9488); // Teal
       default:
-        return Colors.grey;
+        return const Color(0xFF6B7280); // Gray
     }
   }
 }

@@ -48,16 +48,18 @@ class GroupsListScreen extends ConsumerWidget {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton.small(
+          FloatingActionButton.extended(
             heroTag: 'join',
             onPressed: () => _showJoinGroupDialog(context, ref),
-            child: const Icon(Icons.group_add),
+            icon: const Icon(Icons.group_add),
+            label: const Text('Join Group'),
           ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
             heroTag: 'create',
             onPressed: () => context.push('/groups/create'),
-            child: const Icon(Icons.add),
+            icon: const Icon(Icons.add),
+            label: const Text('Create Group'),
           ),
         ],
       ),
@@ -66,10 +68,30 @@ class GroupsListScreen extends ConsumerWidget {
 
   Widget _buildBalanceSummary(
       BuildContext context, AsyncValue<double> balanceAsync) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            context.colorScheme.primary,
+            context.colorScheme.primary.withBlue(
+              (context.colorScheme.primary.blue + 40).clamp(0, 255),
+            ),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: context.colorScheme.primary.withAlpha(60),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: balanceAsync.when(
           data: (balance) {
             final isPositive = balance >= 0;
@@ -77,27 +99,46 @@ class GroupsListScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Overall Balance',
-                  style: context.textTheme.titleMedium,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withAlpha(200),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${isPositive ? '+' : ''}\$${balance.abs().toStringAsFixed(2)}',
-                  style: context.textTheme.headlineMedium?.copyWith(
-                    color: isPositive ? Colors.green : Colors.red,
+                  style: context.textTheme.displaySmall?.copyWith(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  isPositive ? 'You are owed' : 'You owe',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isPositive ? 'You are owed' : 'You owe',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withAlpha(220),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Text('Unable to load balance'),
+          loading: () => const SizedBox(
+            height: 80,
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          ),
+          error: (_, __) => Text(
+            'Unable to load balance',
+            style: TextStyle(color: Colors.white.withAlpha(200)),
+          ),
         ),
       ),
     );
@@ -110,23 +151,37 @@ class GroupsListScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.group_outlined,
-              size: 80,
-              color: context.colorScheme.onSurfaceVariant,
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: context.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.group_outlined,
+                size: 48,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               'No groups yet',
               style: context.textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a group or join one with an invite code',
+              'Create a group to start splitting expenses\nwith friends and family',
               style: context.textTheme.bodyMedium?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () => context.push('/groups/create'),
+              icon: const Icon(Icons.add),
+              label: const Text('Create Group'),
             ),
           ],
         ),
@@ -220,26 +275,50 @@ class _GroupCard extends ConsumerWidget {
 
   const _GroupCard({required this.group});
 
+  // Generate consistent color from group name
+  Color _getGroupColor(String name) {
+    final colors = [
+      const Color(0xFF0D9488), // Teal
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF97316), // Orange
+      const Color(0xFF3B82F6), // Blue
+    ];
+    return colors[name.hashCode.abs() % colors.length];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupBalance = ref.watch(groupBalanceProvider(group.id));
+    final groupColor = _getGroupColor(group.name);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () => context.push('/groups/${group.id}'),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: context.colorScheme.primaryContainer,
-                child: Text(
-                  group.name.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    color: context.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: groupColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    group.name.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      color: groupColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
               ),
@@ -254,11 +333,10 @@ class _GroupCard extends ConsumerWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       '${group.members.length} members',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.onSurfaceVariant,
-                      ),
+                      style: context.textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -266,25 +344,39 @@ class _GroupCard extends ConsumerWidget {
               groupBalance.when(
                 data: (balance) {
                   if (balance == 0) {
-                    return Text(
-                      'Settled',
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        color: context.colorScheme.onSurfaceVariant,
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Settled',
+                        style: context.textTheme.labelMedium?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     );
                   }
                   final isPositive = balance > 0;
-                  return Text(
-                    '${isPositive ? '+' : ''}\$${balance.abs().toStringAsFixed(2)}',
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: isPositive ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.w600,
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (isPositive ? Colors.green : Colors.red).withAlpha(20),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${isPositive ? '+' : ''}\$${balance.abs().toStringAsFixed(2)}',
+                      style: context.textTheme.labelLarge?.copyWith(
+                        color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   );
                 },
                 loading: () => const SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 error: (_, __) => const SizedBox(),

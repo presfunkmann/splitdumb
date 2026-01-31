@@ -94,7 +94,27 @@ class ExpenseDetailScreen extends ConsumerWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Card(
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      context.colorScheme.primary,
+                      context.colorScheme.primary.withBlue(
+                        (context.colorScheme.primary.blue + 40).clamp(0, 255),
+                      ),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: context.colorScheme.primary.withAlpha(60),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -103,28 +123,49 @@ class ExpenseDetailScreen extends ConsumerWidget {
                         '\$${expense.amount.toStringAsFixed(2)}',
                         style: context.textTheme.displayMedium?.copyWith(
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         expense.description,
-                        style: context.textTheme.titleLarge,
+                        style: context.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         dateFormat.format(expense.date),
                         style: context.textTheme.bodyMedium?.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
+                          color: Colors.white.withAlpha(200),
                         ),
                       ),
                       if (expense.category != null) ...[
                         const SizedBox(height: 12),
-                        Chip(
-                          label: Text(expense.category!),
-                          avatar: Icon(
-                            _getCategoryIcon(expense.category),
-                            size: 18,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(30),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getCategoryIcon(expense.category),
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                expense.category!,
+                                style: context.textTheme.labelMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -468,7 +509,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, ExpenseModel expense) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Expense?'),
           content: Text(
@@ -476,15 +517,15 @@ class ExpenseDetailScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: context.colorScheme.error,
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
               ),
               onPressed: () async {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 await ref
                     .read(expenseNotifierProvider.notifier)
                     .deleteExpense(expense.id);

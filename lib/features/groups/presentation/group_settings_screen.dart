@@ -256,7 +256,7 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   void _confirmDeleteGroup(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Group?'),
           content: const Text(
@@ -264,27 +264,25 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: context.colorScheme.error,
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
               ),
               onPressed: () async {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 try {
                   await ref
                       .read(groupNotifierProvider.notifier)
                       .deleteGroup(widget.groupId);
-                  if (context.mounted) {
+                  if (mounted) {
                     context.go('/');
                   }
                 } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to delete: $e')),
-                    );
+                  if (mounted) {
+                    context.showSnackBar('Failed to delete: $e', isError: true);
                   }
                 }
               },

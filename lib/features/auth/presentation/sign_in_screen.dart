@@ -61,16 +61,41 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 80,
-                    color: context.colorScheme.primary,
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          context.colorScheme.primary,
+                          context.colorScheme.primary.withBlue(
+                            (context.colorScheme.primary.blue + 40).clamp(0, 255),
+                          ),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: context.colorScheme.primary.withAlpha(80),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.receipt_long,
+                      size: 40,
+                      color: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     AppConstants.appName,
                     style: context.textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -82,7 +107,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,

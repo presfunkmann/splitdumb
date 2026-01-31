@@ -67,6 +67,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                           context,
                           ref,
                           debt,
+                          getMemberName(debt.fromUserId),
                           getMemberName(debt.toUserId),
                           isYouOwe: true,
                         )),
@@ -79,6 +80,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                           ref,
                           debt,
                           getMemberName(debt.fromUserId),
+                          getMemberName(debt.toUserId),
                           isYouOwe: false,
                         )),
                     const SizedBox(height: 24),
@@ -88,6 +90,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                         context, 'Other Balances', Colors.grey),
                     ...otherDebts.map((debt) => _buildOtherDebtCard(
                           context,
+                          ref,
                           debt,
                           getMemberName(debt.fromUserId),
                           getMemberName(debt.toUserId),
@@ -167,7 +170,8 @@ class GroupBalancesScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     DebtInfo debt,
-    String otherMemberName, {
+    String fromMemberName,
+    String toMemberName, {
     required bool isYouOwe,
   }) {
     return Card(
@@ -197,7 +201,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    otherMemberName,
+                    isYouOwe ? toMemberName : fromMemberName,
                     style: context.textTheme.titleMedium,
                   ),
                 ],
@@ -213,16 +217,16 @@ class GroupBalancesScreen extends ConsumerWidget {
                     color: isYouOwe ? Colors.red : Colors.green,
                   ),
                 ),
-                if (isYouOwe)
-                  TextButton(
-                    onPressed: () => _showSettleDialog(
-                      context,
-                      ref,
-                      debt,
-                      otherMemberName,
-                    ),
-                    child: const Text('Settle'),
+                TextButton(
+                  onPressed: () => _showSettleDialog(
+                    context,
+                    ref,
+                    debt,
+                    fromMemberName,
+                    toMemberName,
                   ),
+                  child: const Text('Settle'),
+                ),
               ],
             ),
           ],
@@ -233,6 +237,7 @@ class GroupBalancesScreen extends ConsumerWidget {
 
   Widget _buildOtherDebtCard(
     BuildContext context,
+    WidgetRef ref,
     DebtInfo debt,
     String fromName,
     String toName,
@@ -252,31 +257,41 @@ class GroupBalancesScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                fromName,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fromName,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textTheme.titleSmall,
+                  ),
+                  Text(
+                    'owes $toName',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const Icon(Icons.arrow_forward, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                toName,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
-              ),
-            ),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: context.colorScheme.surfaceContainerHighest,
-              child: Text(
-                toName.substring(0, 1).toUpperCase(),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              '\$${debt.amount.toStringAsFixed(2)}',
-              style: context.textTheme.titleMedium,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '\$${debt.amount.toStringAsFixed(2)}',
+                  style: context.textTheme.titleMedium,
+                ),
+                TextButton(
+                  onPressed: () => _showSettleDialog(
+                    context,
+                    ref,
+                    debt,
+                    fromName,
+                    toName,
+                  ),
+                  child: const Text('Settle'),
+                ),
+              ],
             ),
           ],
         ),
@@ -288,6 +303,7 @@ class GroupBalancesScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     DebtInfo debt,
+    String fromMemberName,
     String toMemberName,
   ) {
     final amountController =
@@ -295,14 +311,14 @@ class GroupBalancesScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Record Settlement'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('How much are you paying $toMemberName?'),
+              Text('How much is $fromMemberName paying $toMemberName?'),
               const SizedBox(height: 16),
               TextField(
                 controller: amountController,
@@ -317,7 +333,7 @@ class GroupBalancesScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -329,7 +345,7 @@ class GroupBalancesScreen extends ConsumerWidget {
                   return;
                 }
 
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 await ref
                     .read(settlementNotifierProvider.notifier)
                     .createSettlement(
