@@ -86,6 +86,7 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
 
   Future<ExpenseModel?> updateExpense({
     required String expenseId,
+    required String editedBy,
     String? description,
     double? amount,
     String? paidBy,
@@ -99,6 +100,7 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
     state = await AsyncValue.guard(() async {
       return await _repository.updateExpense(
         expenseId: expenseId,
+        editedBy: editedBy,
         description: description,
         amount: amount,
         paidBy: paidBy,

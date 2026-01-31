@@ -11,6 +11,23 @@ enum SplitType {
 }
 
 @freezed
+abstract class ExpenseEdit with _$ExpenseEdit {
+  const factory ExpenseEdit({
+    required String editedBy,
+    @TimestampConverter() required DateTime editedAt,
+    required String description,
+    required double amount,
+    required String paidBy,
+    required SplitType splitType,
+    required Map<String, double> splits,
+    String? category,
+  }) = _ExpenseEdit;
+
+  factory ExpenseEdit.fromJson(Map<String, dynamic> json) =>
+      _$ExpenseEditFromJson(json);
+}
+
+@freezed
 abstract class ExpenseModel with _$ExpenseModel {
   const factory ExpenseModel({
     required String id,
@@ -23,6 +40,7 @@ abstract class ExpenseModel with _$ExpenseModel {
     String? category,
     @TimestampConverter() required DateTime date,
     @TimestampConverter() required DateTime createdAt,
+    @Default([]) List<ExpenseEdit> editHistory,
   }) = _ExpenseModel;
 
   factory ExpenseModel.fromJson(Map<String, dynamic> json) =>

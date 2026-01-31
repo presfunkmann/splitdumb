@@ -56,39 +56,39 @@ class ExpenseDetailScreen extends ConsumerWidget {
           appBar: AppBar(
             title: const Text('Expense Details'),
             actions: [
-              if (isPayer)
-                PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit),
-                        title: Text('Edit'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
+              // Anyone in the group can edit/delete
+              PopupMenuButton(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit),
+                      title: Text('Edit'),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete, color: Colors.red),
-                        title:
-                            Text('Delete', style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete, color: Colors.red),
+                      title:
+                          Text('Delete', style: TextStyle(color: Colors.red)),
+                      contentPadding: EdgeInsets.zero,
                     ),
-                  ],
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'edit':
-                        context.push(
-                            '/groups/$groupId/expenses/$expenseId/edit');
-                        break;
-                      case 'delete':
-                        _confirmDelete(context, ref, expense);
-                        break;
-                    }
-                  },
-                ),
+                  ),
+                ],
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      context.push(
+                          '/groups/$groupId/expenses/$expenseId/edit');
+                      break;
+                    case 'delete':
+                      _confirmDelete(context, ref, expense);
+                      break;
+                  }
+                },
+              ),
             ],
           ),
           body: ListView(
@@ -252,6 +252,43 @@ class ExpenseDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              // Edit History Section
+              if (expense.editHistory.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 20,
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Edit History',
+                              style: context.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...expense.editHistory.reversed.map((edit) {
+                          return _buildEditHistoryEntry(
+                            context,
+                            edit,
+                            expense,
+                            getMemberName,
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -263,6 +300,115 @@ class ExpenseDetailScreen extends ConsumerWidget {
       error: (error, _) => Scaffold(
         appBar: AppBar(),
         body: Center(child: Text('Error: $error')),
+      ),
+    );
+  }
+
+  Widget _buildEditHistoryEntry(
+    BuildContext context,
+    ExpenseEdit edit,
+    ExpenseModel currentExpense,
+    String Function(String) getMemberName,
+  ) {
+    final editedByName = getMemberName(edit.editedBy);
+    final dateFormat = DateFormat.yMMMd().add_jm();
+
+    // Find what changed by comparing to next state
+    // Since history stores previous values, we compare to see what was changed
+    final changes = <String>[];
+
+    // Find the index of this edit in history
+    final editIndex = currentExpense.editHistory.indexOf(edit);
+
+    // The "after" values are either the next edit's previous values, or current expense values
+    String afterDescription;
+    double afterAmount;
+    String afterPaidBy;
+    String? afterCategory;
+
+    if (editIndex == currentExpense.editHistory.length - 1) {
+      // This is the most recent edit, compare to current values
+      afterDescription = currentExpense.description;
+      afterAmount = currentExpense.amount;
+      afterPaidBy = currentExpense.paidBy;
+      afterCategory = currentExpense.category;
+    } else {
+      // Get the next edit's "before" values (which is what this edit changed TO)
+      final nextEdit = currentExpense.editHistory[editIndex + 1];
+      afterDescription = nextEdit.description;
+      afterAmount = nextEdit.amount;
+      afterPaidBy = nextEdit.paidBy;
+      afterCategory = nextEdit.category;
+    }
+
+    if (edit.description != afterDescription) {
+      changes.add('Description: "${edit.description}" → "$afterDescription"');
+    }
+    if (edit.amount != afterAmount) {
+      changes.add('Amount: \$${edit.amount.toStringAsFixed(2)} → \$${afterAmount.toStringAsFixed(2)}');
+    }
+    if (edit.paidBy != afterPaidBy) {
+      changes.add('Payer: ${getMemberName(edit.paidBy)} → ${getMemberName(afterPaidBy)}');
+    }
+    if (edit.category != afterCategory) {
+      final oldCat = edit.category ?? 'None';
+      final newCat = afterCategory ?? 'None';
+      changes.add('Category: $oldCat → $newCat');
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceContainerHighest.withAlpha(50),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: context.colorScheme.primary,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                dateFormat.format(edit.editedAt),
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Edited by $editedByName',
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (changes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...changes.map((change) => Padding(
+              padding: const EdgeInsets.only(left: 8, top: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• ', style: TextStyle(color: context.colorScheme.primary)),
+                  Expanded(
+                    child: Text(
+                      change,
+                      style: context.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ],
       ),
     );
   }

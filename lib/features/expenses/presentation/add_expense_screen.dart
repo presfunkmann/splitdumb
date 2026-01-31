@@ -547,9 +547,11 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     }
 
     if (_isEditing) {
+      final currentMember = ref.read(currentUserMemberProvider(widget.groupId));
       final expense =
           await ref.read(expenseNotifierProvider.notifier).updateExpense(
                 expenseId: widget.expenseId!,
+                editedBy: currentMember?.id ?? '',
                 description: _descriptionController.text.trim(),
                 amount: amount,
                 paidBy: _paidBy!,
