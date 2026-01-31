@@ -13,8 +13,8 @@ final groupExpensesProvider =
 });
 
 final expenseByIdProvider =
-    FutureProvider.family<ExpenseModel?, String>((ref, expenseId) async {
-  return ref.watch(expenseRepositoryProvider).getExpenseById(expenseId);
+    StreamProvider.family<ExpenseModel?, String>((ref, expenseId) {
+  return ref.watch(expenseRepositoryProvider).watchExpenseById(expenseId);
 });
 
 class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {

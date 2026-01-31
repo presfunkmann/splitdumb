@@ -32,6 +32,13 @@ class ExpenseRepository {
     return ExpenseModel.fromJson({...doc.data()!, 'id': doc.id});
   }
 
+  Stream<ExpenseModel?> watchExpenseById(String expenseId) {
+    return _expensesRef.doc(expenseId).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return ExpenseModel.fromJson({...doc.data()!, 'id': doc.id});
+    });
+  }
+
   Future<List<ExpenseModel>> getGroupExpenses(String groupId) async {
     final snapshot = await _expensesRef
         .where('groupId', isEqualTo: groupId)

@@ -63,18 +63,28 @@ class AuthRepository {
   }
 
   Future<UserModel> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      throw Exception('Google sign in cancelled');
+    final UserCredential userCredential;
+
+    if (kIsWeb) {
+      // Use signInWithPopup for web - google_sign_in's signIn() doesn't provide idToken
+      final googleProvider = GoogleAuthProvider();
+      userCredential = await _auth.signInWithPopup(googleProvider);
+    } else {
+      // Use google_sign_in for mobile platforms
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw Exception('Google sign in cancelled');
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      userCredential = await _auth.signInWithCredential(credential);
     }
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final userCredential = await _auth.signInWithCredential(credential);
     return await _getOrCreateUserDocument(userCredential.user!);
   }
 
