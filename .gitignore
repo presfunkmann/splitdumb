@@ -1,6 +1,10 @@
 # Claude Code
 .claude/
 
+# Node.js (backup scripts)
+node_modules/
+scripts/
+
 # Miscellaneous
 *.class
 *.log

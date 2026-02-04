@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpenseEdit {
 
- String get editedBy;@TimestampConverter() DateTime get editedAt; String get description; double get amount; String get paidBy; SplitType get splitType; Map<String, double> get splits; String? get category;
+ String get editedBy;@TimestampConverter() DateTime get editedAt; String get description; double get amount; Map<String, double> get paidBy; SplitType get splitType; Map<String, double> get splits; String? get category;
 /// Create a copy of ExpenseEdit
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,12 +28,12 @@ $ExpenseEditCopyWith<ExpenseEdit> get copyWith => _$ExpenseEditCopyWithImpl<Expe
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseEdit&&(identical(other.editedBy, editedBy) || other.editedBy == editedBy)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidBy, paidBy) || other.paidBy == paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other.splits, splits)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseEdit&&(identical(other.editedBy, editedBy) || other.editedBy == editedBy)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&const DeepCollectionEquality().equals(other.paidBy, paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other.splits, splits)&&(identical(other.category, category) || other.category == category));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,editedBy,editedAt,description,amount,paidBy,splitType,const DeepCollectionEquality().hash(splits),category);
+int get hashCode => Object.hash(runtimeType,editedBy,editedAt,description,amount,const DeepCollectionEquality().hash(paidBy),splitType,const DeepCollectionEquality().hash(splits),category);
 
 @override
 String toString() {
@@ -48,7 +48,7 @@ abstract mixin class $ExpenseEditCopyWith<$Res>  {
   factory $ExpenseEditCopyWith(ExpenseEdit value, $Res Function(ExpenseEdit) _then) = _$ExpenseEditCopyWithImpl;
 @useResult
 $Res call({
- String editedBy,@TimestampConverter() DateTime editedAt, String description, double amount, String paidBy, SplitType splitType, Map<String, double> splits, String? category
+ String editedBy,@TimestampConverter() DateTime editedAt, String description, double amount, Map<String, double> paidBy, SplitType splitType, Map<String, double> splits, String? category
 });
 
 
@@ -72,7 +72,7 @@ as String,editedAt: null == editedAt ? _self.editedAt : editedAt // ignore: cast
 as DateTime,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,paidBy: null == paidBy ? _self.paidBy : paidBy // ignore: cast_nullable_to_non_nullable
-as String,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
+as Map<String, double>,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
 as SplitType,splits: null == splits ? _self.splits : splits // ignore: cast_nullable_to_non_nullable
 as Map<String, double>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -160,7 +160,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpenseEdit() when $default != null:
 return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category);case _:
@@ -181,7 +181,7 @@ return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseEdit():
 return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category);case _:
@@ -201,7 +201,7 @@ return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String editedBy, @TimestampConverter()  DateTime editedAt,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseEdit() when $default != null:
 return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category);case _:
@@ -215,15 +215,21 @@ return $default(_that.editedBy,_that.editedAt,_that.description,_that.amount,_th
 /// @nodoc
 @JsonSerializable()
 
-class _ExpenseEdit implements ExpenseEdit {
-  const _ExpenseEdit({required this.editedBy, @TimestampConverter() required this.editedAt, required this.description, required this.amount, required this.paidBy, required this.splitType, required final  Map<String, double> splits, this.category}): _splits = splits;
+class _ExpenseEdit extends ExpenseEdit {
+  const _ExpenseEdit({required this.editedBy, @TimestampConverter() required this.editedAt, required this.description, required this.amount, required final  Map<String, double> paidBy, required this.splitType, required final  Map<String, double> splits, this.category}): _paidBy = paidBy,_splits = splits,super._();
   factory _ExpenseEdit.fromJson(Map<String, dynamic> json) => _$ExpenseEditFromJson(json);
 
 @override final  String editedBy;
 @override@TimestampConverter() final  DateTime editedAt;
 @override final  String description;
 @override final  double amount;
-@override final  String paidBy;
+ final  Map<String, double> _paidBy;
+@override Map<String, double> get paidBy {
+  if (_paidBy is EqualUnmodifiableMapView) return _paidBy;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_paidBy);
+}
+
 @override final  SplitType splitType;
  final  Map<String, double> _splits;
 @override Map<String, double> get splits {
@@ -247,12 +253,12 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseEdit&&(identical(other.editedBy, editedBy) || other.editedBy == editedBy)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidBy, paidBy) || other.paidBy == paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other._splits, _splits)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseEdit&&(identical(other.editedBy, editedBy) || other.editedBy == editedBy)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&const DeepCollectionEquality().equals(other._paidBy, _paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other._splits, _splits)&&(identical(other.category, category) || other.category == category));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,editedBy,editedAt,description,amount,paidBy,splitType,const DeepCollectionEquality().hash(_splits),category);
+int get hashCode => Object.hash(runtimeType,editedBy,editedAt,description,amount,const DeepCollectionEquality().hash(_paidBy),splitType,const DeepCollectionEquality().hash(_splits),category);
 
 @override
 String toString() {
@@ -267,7 +273,7 @@ abstract mixin class _$ExpenseEditCopyWith<$Res> implements $ExpenseEditCopyWith
   factory _$ExpenseEditCopyWith(_ExpenseEdit value, $Res Function(_ExpenseEdit) _then) = __$ExpenseEditCopyWithImpl;
 @override @useResult
 $Res call({
- String editedBy,@TimestampConverter() DateTime editedAt, String description, double amount, String paidBy, SplitType splitType, Map<String, double> splits, String? category
+ String editedBy,@TimestampConverter() DateTime editedAt, String description, double amount, Map<String, double> paidBy, SplitType splitType, Map<String, double> splits, String? category
 });
 
 
@@ -290,8 +296,8 @@ editedBy: null == editedBy ? _self.editedBy : editedBy // ignore: cast_nullable_
 as String,editedAt: null == editedAt ? _self.editedAt : editedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
-as double,paidBy: null == paidBy ? _self.paidBy : paidBy // ignore: cast_nullable_to_non_nullable
-as String,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
+as double,paidBy: null == paidBy ? _self._paidBy : paidBy // ignore: cast_nullable_to_non_nullable
+as Map<String, double>,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
 as SplitType,splits: null == splits ? _self._splits : splits // ignore: cast_nullable_to_non_nullable
 as Map<String, double>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -305,7 +311,7 @@ as String?,
 /// @nodoc
 mixin _$ExpenseModel {
 
- String get id; String get groupId; String get description; double get amount; String get paidBy; SplitType get splitType; Map<String, double> get splits; String? get category;@TimestampConverter() DateTime get date;@TimestampConverter() DateTime get createdAt; List<ExpenseEdit> get editHistory;
+ String get id; String get groupId; String get description; double get amount; Map<String, double> get paidBy; SplitType get splitType; Map<String, double> get splits; String? get category;@TimestampConverter() DateTime get date;@TimestampConverter() DateTime get createdAt; List<ExpenseEdit> get editHistory;
 /// Create a copy of ExpenseModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -318,12 +324,12 @@ $ExpenseModelCopyWith<ExpenseModel> get copyWith => _$ExpenseModelCopyWithImpl<E
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseModel&&(identical(other.id, id) || other.id == id)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidBy, paidBy) || other.paidBy == paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other.splits, splits)&&(identical(other.category, category) || other.category == category)&&(identical(other.date, date) || other.date == date)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.editHistory, editHistory));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseModel&&(identical(other.id, id) || other.id == id)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&const DeepCollectionEquality().equals(other.paidBy, paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other.splits, splits)&&(identical(other.category, category) || other.category == category)&&(identical(other.date, date) || other.date == date)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.editHistory, editHistory));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,groupId,description,amount,paidBy,splitType,const DeepCollectionEquality().hash(splits),category,date,createdAt,const DeepCollectionEquality().hash(editHistory));
+int get hashCode => Object.hash(runtimeType,id,groupId,description,amount,const DeepCollectionEquality().hash(paidBy),splitType,const DeepCollectionEquality().hash(splits),category,date,createdAt,const DeepCollectionEquality().hash(editHistory));
 
 @override
 String toString() {
@@ -338,7 +344,7 @@ abstract mixin class $ExpenseModelCopyWith<$Res>  {
   factory $ExpenseModelCopyWith(ExpenseModel value, $Res Function(ExpenseModel) _then) = _$ExpenseModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String groupId, String description, double amount, String paidBy, SplitType splitType, Map<String, double> splits, String? category,@TimestampConverter() DateTime date,@TimestampConverter() DateTime createdAt, List<ExpenseEdit> editHistory
+ String id, String groupId, String description, double amount, Map<String, double> paidBy, SplitType splitType, Map<String, double> splits, String? category,@TimestampConverter() DateTime date,@TimestampConverter() DateTime createdAt, List<ExpenseEdit> editHistory
 });
 
 
@@ -362,7 +368,7 @@ as String,groupId: null == groupId ? _self.groupId : groupId // ignore: cast_nul
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,paidBy: null == paidBy ? _self.paidBy : paidBy // ignore: cast_nullable_to_non_nullable
-as String,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
+as Map<String, double>,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
 as SplitType,splits: null == splits ? _self.splits : splits // ignore: cast_nullable_to_non_nullable
 as Map<String, double>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String?,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
@@ -453,7 +459,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String groupId,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String groupId,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpenseModel() when $default != null:
 return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category,_that.date,_that.createdAt,_that.editHistory);case _:
@@ -474,7 +480,7 @@ return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paid
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String groupId,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String groupId,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseModel():
 return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category,_that.date,_that.createdAt,_that.editHistory);case _:
@@ -494,7 +500,7 @@ return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paid
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String groupId,  String description,  double amount,  String paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String groupId,  String description,  double amount,  Map<String, double> paidBy,  SplitType splitType,  Map<String, double> splits,  String? category, @TimestampConverter()  DateTime date, @TimestampConverter()  DateTime createdAt,  List<ExpenseEdit> editHistory)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseModel() when $default != null:
 return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paidBy,_that.splitType,_that.splits,_that.category,_that.date,_that.createdAt,_that.editHistory);case _:
@@ -508,15 +514,21 @@ return $default(_that.id,_that.groupId,_that.description,_that.amount,_that.paid
 /// @nodoc
 @JsonSerializable()
 
-class _ExpenseModel implements ExpenseModel {
-  const _ExpenseModel({required this.id, required this.groupId, required this.description, required this.amount, required this.paidBy, required this.splitType, required final  Map<String, double> splits, this.category, @TimestampConverter() required this.date, @TimestampConverter() required this.createdAt, final  List<ExpenseEdit> editHistory = const []}): _splits = splits,_editHistory = editHistory;
+class _ExpenseModel extends ExpenseModel {
+  const _ExpenseModel({required this.id, required this.groupId, required this.description, required this.amount, required final  Map<String, double> paidBy, required this.splitType, required final  Map<String, double> splits, this.category, @TimestampConverter() required this.date, @TimestampConverter() required this.createdAt, final  List<ExpenseEdit> editHistory = const []}): _paidBy = paidBy,_splits = splits,_editHistory = editHistory,super._();
   factory _ExpenseModel.fromJson(Map<String, dynamic> json) => _$ExpenseModelFromJson(json);
 
 @override final  String id;
 @override final  String groupId;
 @override final  String description;
 @override final  double amount;
-@override final  String paidBy;
+ final  Map<String, double> _paidBy;
+@override Map<String, double> get paidBy {
+  if (_paidBy is EqualUnmodifiableMapView) return _paidBy;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_paidBy);
+}
+
 @override final  SplitType splitType;
  final  Map<String, double> _splits;
 @override Map<String, double> get splits {
@@ -549,12 +561,12 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseModel&&(identical(other.id, id) || other.id == id)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidBy, paidBy) || other.paidBy == paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other._splits, _splits)&&(identical(other.category, category) || other.category == category)&&(identical(other.date, date) || other.date == date)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other._editHistory, _editHistory));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseModel&&(identical(other.id, id) || other.id == id)&&(identical(other.groupId, groupId) || other.groupId == groupId)&&(identical(other.description, description) || other.description == description)&&(identical(other.amount, amount) || other.amount == amount)&&const DeepCollectionEquality().equals(other._paidBy, _paidBy)&&(identical(other.splitType, splitType) || other.splitType == splitType)&&const DeepCollectionEquality().equals(other._splits, _splits)&&(identical(other.category, category) || other.category == category)&&(identical(other.date, date) || other.date == date)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other._editHistory, _editHistory));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,groupId,description,amount,paidBy,splitType,const DeepCollectionEquality().hash(_splits),category,date,createdAt,const DeepCollectionEquality().hash(_editHistory));
+int get hashCode => Object.hash(runtimeType,id,groupId,description,amount,const DeepCollectionEquality().hash(_paidBy),splitType,const DeepCollectionEquality().hash(_splits),category,date,createdAt,const DeepCollectionEquality().hash(_editHistory));
 
 @override
 String toString() {
@@ -569,7 +581,7 @@ abstract mixin class _$ExpenseModelCopyWith<$Res> implements $ExpenseModelCopyWi
   factory _$ExpenseModelCopyWith(_ExpenseModel value, $Res Function(_ExpenseModel) _then) = __$ExpenseModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String groupId, String description, double amount, String paidBy, SplitType splitType, Map<String, double> splits, String? category,@TimestampConverter() DateTime date,@TimestampConverter() DateTime createdAt, List<ExpenseEdit> editHistory
+ String id, String groupId, String description, double amount, Map<String, double> paidBy, SplitType splitType, Map<String, double> splits, String? category,@TimestampConverter() DateTime date,@TimestampConverter() DateTime createdAt, List<ExpenseEdit> editHistory
 });
 
 
@@ -592,8 +604,8 @@ id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,groupId: null == groupId ? _self.groupId : groupId // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
-as double,paidBy: null == paidBy ? _self.paidBy : paidBy // ignore: cast_nullable_to_non_nullable
-as String,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
+as double,paidBy: null == paidBy ? _self._paidBy : paidBy // ignore: cast_nullable_to_non_nullable
+as Map<String, double>,splitType: null == splitType ? _self.splitType : splitType // ignore: cast_nullable_to_non_nullable
 as SplitType,splits: null == splits ? _self._splits : splits // ignore: cast_nullable_to_non_nullable
 as Map<String, double>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String?,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable

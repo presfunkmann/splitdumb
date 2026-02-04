@@ -22,20 +22,23 @@ class ExpenseRepository {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => ExpenseModel.fromJson({...doc.data(), 'id': doc.id}))
+            .map((doc) => ExpenseModel.fromJson(
+                migrateExpenseJson({...doc.data(), 'id': doc.id})))
             .toList());
   }
 
   Future<ExpenseModel?> getExpenseById(String expenseId) async {
     final doc = await _expensesRef.doc(expenseId).get();
     if (!doc.exists) return null;
-    return ExpenseModel.fromJson({...doc.data()!, 'id': doc.id});
+    return ExpenseModel.fromJson(
+        migrateExpenseJson({...doc.data()!, 'id': doc.id}));
   }
 
   Stream<ExpenseModel?> watchExpenseById(String expenseId) {
     return _expensesRef.doc(expenseId).snapshots().map((doc) {
       if (!doc.exists) return null;
-      return ExpenseModel.fromJson({...doc.data()!, 'id': doc.id});
+      return ExpenseModel.fromJson(
+          migrateExpenseJson({...doc.data()!, 'id': doc.id}));
     });
   }
 
@@ -46,7 +49,8 @@ class ExpenseRepository {
         .get();
 
     return snapshot.docs
-        .map((doc) => ExpenseModel.fromJson({...doc.data(), 'id': doc.id}))
+        .map((doc) => ExpenseModel.fromJson(
+            migrateExpenseJson({...doc.data(), 'id': doc.id})))
         .toList();
   }
 
@@ -54,7 +58,7 @@ class ExpenseRepository {
     required String groupId,
     required String description,
     required double amount,
-    required String paidBy,
+    required Map<String, double> paidBy,
     required SplitType splitType,
     required Map<String, double> splits,
     String? category,
@@ -86,7 +90,7 @@ class ExpenseRepository {
     required String editedBy,
     String? description,
     double? amount,
-    String? paidBy,
+    Map<String, double>? paidBy,
     SplitType? splitType,
     Map<String, double>? splits,
     String? category,

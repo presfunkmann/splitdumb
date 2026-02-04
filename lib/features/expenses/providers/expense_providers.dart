@@ -28,39 +28,7 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
     required String groupId,
     required String description,
     required double amount,
-    required SplitType splitType,
-    required Map<String, double> splits,
-    String? category,
-    DateTime? date,
-  }) async {
-    state = const AsyncValue.loading();
-    final user = _ref.read(authStateProvider).valueOrNull;
-    if (user == null) {
-      state = AsyncValue.error('Not authenticated', StackTrace.current);
-      return null;
-    }
-
-    state = await AsyncValue.guard(() async {
-      return await _repository.createExpense(
-        groupId: groupId,
-        description: description,
-        amount: amount,
-        paidBy: user.uid,
-        splitType: splitType,
-        splits: splits,
-        category: category,
-        date: date,
-      );
-    });
-
-    return state.valueOrNull;
-  }
-
-  Future<ExpenseModel?> createExpenseWithPayer({
-    required String groupId,
-    required String description,
-    required double amount,
-    required String paidBy,
+    required Map<String, double> paidBy,
     required SplitType splitType,
     required Map<String, double> splits,
     String? category,
@@ -89,7 +57,7 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
     required String editedBy,
     String? description,
     double? amount,
-    String? paidBy,
+    Map<String, double>? paidBy,
     SplitType? splitType,
     Map<String, double>? splits,
     String? category,
@@ -163,5 +131,12 @@ class SplitCalculator {
       case SplitType.percentage:
         return (total - 100).abs() < 0.01;
     }
+  }
+
+  /// Validate that paidBy amounts sum to the expense amount
+  static bool validatePaidBy(double amount, Map<String, double> paidBy) {
+    if (paidBy.isEmpty) return false;
+    final total = paidBy.values.fold(0.0, (sum, v) => sum + v);
+    return (total - amount).abs() < 0.01;
   }
 }

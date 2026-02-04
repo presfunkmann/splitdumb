@@ -11,7 +11,9 @@ _ExpenseEdit _$ExpenseEditFromJson(Map<String, dynamic> json) => _ExpenseEdit(
   editedAt: const TimestampConverter().fromJson(json['editedAt']),
   description: json['description'] as String,
   amount: (json['amount'] as num).toDouble(),
-  paidBy: json['paidBy'] as String,
+  paidBy: (json['paidBy'] as Map<String, dynamic>).map(
+    (k, e) => MapEntry(k, (e as num).toDouble()),
+  ),
   splitType: $enumDecode(_$SplitTypeEnumMap, json['splitType']),
   splits: (json['splits'] as Map<String, dynamic>).map(
     (k, e) => MapEntry(k, (e as num).toDouble()),
@@ -43,7 +45,9 @@ _ExpenseModel _$ExpenseModelFromJson(Map<String, dynamic> json) =>
       groupId: json['groupId'] as String,
       description: json['description'] as String,
       amount: (json['amount'] as num).toDouble(),
-      paidBy: json['paidBy'] as String,
+      paidBy: (json['paidBy'] as Map<String, dynamic>).map(
+        (k, e) => MapEntry(k, (e as num).toDouble()),
+      ),
       splitType: $enumDecode(_$SplitTypeEnumMap, json['splitType']),
       splits: (json['splits'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, (e as num).toDouble()),

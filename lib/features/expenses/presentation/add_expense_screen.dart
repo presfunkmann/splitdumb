@@ -29,7 +29,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
   SplitType _splitType = SplitType.equal;
   String? _selectedCategory;
-  String? _paidBy;
+  String? _paidBy; // For single payer mode
+  Map<String, double> _paidByAmounts = {}; // For multi-payer mode
+  bool _isMultiplePayers = false;
   DateTime _date = DateTime.now();
   Map<String, double> _customSplits = {};
   Map<String, bool> _selectedMembers = {};
@@ -62,9 +64,15 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     _amountController.text = expense.amount.toStringAsFixed(2);
     _splitType = expense.splitType;
     _selectedCategory = expense.category;
-    _paidBy = expense.paidBy;
     _date = expense.date;
     _customSplits = Map.from(expense.splits);
+
+    // Initialize paidBy - check if multiple payers
+    _paidByAmounts = Map.from(expense.paidBy);
+    _isMultiplePayers = expense.hasMultiplePayers;
+    if (!_isMultiplePayers && expense.paidBy.isNotEmpty) {
+      _paidBy = expense.paidBy.keys.first;
+    }
 
     // For equal splits, mark which members are selected
     for (final memberId in expense.splits.keys) {
@@ -236,29 +244,59 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               },
             ),
             const Divider(height: 32),
-            Text(
-              'Paid by',
-              style: context.textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Paid by',
+                  style: context.textTheme.titleMedium,
+                ),
+                Row(
+                  children: [
+                    Text(
+                      'Split payment',
+                      style: context.textTheme.bodySmall,
+                    ),
+                    Switch(
+                      value: _isMultiplePayers,
+                      onChanged: (value) {
+                        setState(() {
+                          _isMultiplePayers = value;
+                          if (!value && _paidByAmounts.isNotEmpty) {
+                            // Switch to single payer - keep the highest payer
+                            final maxEntry = _paidByAmounts.entries
+                                .reduce((a, b) => a.value > b.value ? a : b);
+                            _paidBy = maxEntry.key;
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: group.members.map<Widget>((member) {
-                final isSelected = _paidBy == member.id;
-                final isCurrentUser = member.id == currentMember?.id;
-                return ChoiceChip(
-                  label: Text(isCurrentUser
-                      ? 'You (${member.displayName})'
-                      : member.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _paidBy = member.id);
-                    }
-                  },
-                );
-              }).toList(),
-            ),
+            if (_isMultiplePayers)
+              _buildMultiPayerUI(group.members, currentMember?.id)
+            else
+              Wrap(
+                spacing: 8,
+                children: group.members.map<Widget>((member) {
+                  final isSelected = _paidBy == member.id;
+                  final isCurrentUser = member.id == currentMember?.id;
+                  return ChoiceChip(
+                    label: Text(isCurrentUser
+                        ? 'You (${member.displayName})'
+                        : member.displayName),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _paidBy = member.id);
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
             const SizedBox(height: 24),
             Text(
               'Split type',
@@ -421,6 +459,68 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     );
   }
 
+  Widget _buildMultiPayerUI(List<dynamic> members, String? currentMemberId) {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final totalPaid = _paidByAmounts.values.fold(0.0, (a, b) => a + b);
+    final remaining = amount - totalPaid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Enter payment amounts:',
+              style: context.textTheme.bodyMedium,
+            ),
+            Text(
+              remaining.abs() < 0.01
+                  ? 'Balanced'
+                  : '\$${remaining.abs().toStringAsFixed(2)} ${remaining > 0 ? 'left' : 'over'}',
+              style: TextStyle(
+                color: remaining.abs() < 0.01 ? Colors.green : Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...members.map((member) {
+          final isCurrentUser = member.id == currentMemberId;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextFormField(
+              initialValue: _paidByAmounts[member.id]?.toStringAsFixed(2) ?? '',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                labelText: isCurrentUser
+                    ? 'You (${member.displayName})'
+                    : member.displayName,
+                prefixText: '\$ ',
+                isDense: true,
+              ),
+              onChanged: (value) {
+                final parsed = double.tryParse(value) ?? 0;
+                setState(() {
+                  if (parsed > 0) {
+                    _paidByAmounts[member.id] = parsed;
+                  } else {
+                    _paidByAmounts.remove(member.id);
+                  }
+                });
+              },
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildPercentageSplitUI(
       List<dynamic> members, String? currentMemberId, double amount) {
     final totalPercentage = _customSplits.values.fold(0.0, (a, b) => a + b);
@@ -546,6 +646,26 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
       return;
     }
 
+    // Build paidBy map
+    final Map<String, double> paidBy;
+    if (_isMultiplePayers) {
+      if (!SplitCalculator.validatePaidBy(amount, _paidByAmounts)) {
+        context.showSnackBar('Payment amounts must equal total expense', isError: true);
+        return;
+      }
+      if (_paidByAmounts.isEmpty) {
+        context.showSnackBar('At least one person must pay', isError: true);
+        return;
+      }
+      paidBy = Map.from(_paidByAmounts);
+    } else {
+      if (_paidBy == null) {
+        context.showSnackBar('Please select who paid', isError: true);
+        return;
+      }
+      paidBy = {_paidBy!: amount};
+    }
+
     if (_isEditing) {
       final currentMember = ref.read(currentUserMemberProvider(widget.groupId));
       final expense =
@@ -554,7 +674,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                 editedBy: currentMember?.id ?? '',
                 description: _descriptionController.text.trim(),
                 amount: amount,
-                paidBy: _paidBy!,
+                paidBy: paidBy,
                 splitType: _splitType,
                 splits: splits,
                 category: _selectedCategory,
@@ -568,11 +688,11 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     } else {
       final expense = await ref
           .read(expenseNotifierProvider.notifier)
-          .createExpenseWithPayer(
+          .createExpense(
             groupId: widget.groupId,
             description: _descriptionController.text.trim(),
             amount: amount,
-            paidBy: _paidBy!,
+            paidBy: paidBy,
             splitType: _splitType,
             splits: splits,
             category: _selectedCategory,

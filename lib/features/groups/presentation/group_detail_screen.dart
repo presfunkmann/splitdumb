@@ -477,18 +477,32 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPayer = expense.paidBy == currentMemberId;
-    final userShare = expense.splits[currentMemberId] ?? 0;
+    final userPaid = expense.paidBy[currentMemberId] ?? 0.0;
+    final userShare = expense.splits[currentMemberId] ?? 0.0;
+    final userNetBalance = userPaid - userShare;
+    final isPayer = userPaid > 0;
 
-    // Get payer's display name
-    String getPayerName() {
-      try {
-        final member = group.members.firstWhere(
-          (m) => m.id == expense.paidBy,
-        );
-        return member.displayName;
-      } catch (_) {
-        return 'Someone';
+    // Get payer text for display
+    String getPayerText() {
+      if (expense.hasMultiplePayers) {
+        if (isPayer) {
+          final otherCount = expense.paidBy.length - 1;
+          return otherCount > 0 ? 'You + $otherCount others paid' : 'You paid';
+        } else {
+          return '${expense.paidBy.length} people paid';
+        }
+      } else {
+        if (isPayer) {
+          return 'You paid';
+        }
+        try {
+          final member = group.members.firstWhere(
+            (m) => m.id == expense.primaryPayer,
+          );
+          return 'Paid by ${member.displayName}';
+        } catch (_) {
+          return 'Paid by someone';
+        }
       }
     }
 
@@ -529,7 +543,7 @@ class _ExpenseCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isPayer ? 'You paid' : 'Paid by ${getPayerName()}',
+                      getPayerText(),
                       style: context.textTheme.bodySmall,
                     ),
                   ],
@@ -549,15 +563,15 @@ class _ExpenseCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: (isPayer ? Colors.green : Colors.red).withAlpha(20),
+                      color: (userNetBalance >= 0 ? Colors.green : Colors.red).withAlpha(20),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isPayer
-                          ? '+\$${(expense.amount - userShare).toStringAsFixed(2)}'
-                          : '-\$${userShare.toStringAsFixed(2)}',
+                      userNetBalance >= 0
+                          ? '+\$${userNetBalance.toStringAsFixed(2)}'
+                          : '-\$${userNetBalance.abs().toStringAsFixed(2)}',
                       style: context.textTheme.labelSmall?.copyWith(
-                        color: isPayer ? Colors.green.shade700 : Colors.red.shade700,
+                        color: userNetBalance >= 0 ? Colors.green.shade700 : Colors.red.shade700,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

@@ -34,7 +34,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
 
         final group = groupAsync.valueOrNull;
         final currentMemberId = currentMember?.id;
-        final isPayer = expense.paidBy == currentMemberId;
+        final isPayer = expense.paidBy.containsKey(currentMemberId);
         final dateFormat = DateFormat.yMMMMd();
 
         // Helper to get member display name
@@ -50,7 +50,8 @@ class ExpenseDetailScreen extends ConsumerWidget {
           }
         }
 
-        final payerName = getMemberName(expense.paidBy);
+        // Get primary payer name for single payer display
+        final primaryPayerName = getMemberName(expense.primaryPayer);
 
         return Scaffold(
           appBar: AppBar(
@@ -185,21 +186,42 @@ class ExpenseDetailScreen extends ConsumerWidget {
                         style: context.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          child: Text(
-                            payerName.substring(0, 1).toUpperCase(),
+                      if (expense.hasMultiplePayers)
+                        ...expense.paidBy.entries.map((entry) {
+                          final payerName = getMemberName(entry.key);
+                          final isCurrentUserPayer = entry.key == currentMemberId;
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              child: Text(
+                                payerName.substring(0, 1).toUpperCase(),
+                              ),
+                            ),
+                            title: Text(isCurrentUserPayer ? 'You ($payerName)' : payerName),
+                            trailing: Text(
+                              '\$${entry.value.toStringAsFixed(2)}',
+                              style: context.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        })
+                      else
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            child: Text(
+                              primaryPayerName.substring(0, 1).toUpperCase(),
+                            ),
+                          ),
+                          title: Text(isPayer ? 'You ($primaryPayerName)' : primaryPayerName),
+                          trailing: Text(
+                            '\$${expense.amount.toStringAsFixed(2)}',
+                            style: context.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                        title: Text(isPayer ? 'You ($payerName)' : payerName),
-                        trailing: Text(
-                          '\$${expense.amount.toStringAsFixed(2)}',
-                          style: context.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -227,7 +249,9 @@ class ExpenseDetailScreen extends ConsumerWidget {
                       ...expense.splits.entries.map((entry) {
                         final memberName = getMemberName(entry.key);
                         final isCurrentUser = entry.key == currentMemberId;
-                        final isMemberPayer = entry.key == expense.paidBy;
+                        final memberPaidAmount = expense.paidBy[entry.key] ?? 0.0;
+                        final memberOwes = entry.value;
+                        final netBalance = memberPaidAmount - memberOwes;
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
@@ -250,18 +274,25 @@ class ExpenseDetailScreen extends ConsumerWidget {
                                 '\$${entry.value.toStringAsFixed(2)}',
                                 style: context.textTheme.titleSmall,
                               ),
-                              if (isMemberPayer)
+                              if (netBalance > 0.01)
                                 Text(
-                                  'Gets back \$${(expense.amount - entry.value).toStringAsFixed(2)}',
+                                  'Gets back \$${netBalance.toStringAsFixed(2)}',
                                   style: context.textTheme.bodySmall?.copyWith(
                                     color: Colors.green,
                                   ),
                                 )
-                              else
+                              else if (netBalance < -0.01)
                                 Text(
-                                  'Owes',
+                                  'Owes \$${netBalance.abs().toStringAsFixed(2)}',
                                   style: context.textTheme.bodySmall?.copyWith(
                                     color: Colors.red,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  'Settled',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                             ],
@@ -364,7 +395,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
     // The "after" values are either the next edit's previous values, or current expense values
     String afterDescription;
     double afterAmount;
-    String afterPaidBy;
+    Map<String, double> afterPaidBy;
     String? afterCategory;
 
     if (editIndex == currentExpense.editHistory.length - 1) {
@@ -388,8 +419,15 @@ class ExpenseDetailScreen extends ConsumerWidget {
     if (edit.amount != afterAmount) {
       changes.add('Amount: \$${edit.amount.toStringAsFixed(2)} → \$${afterAmount.toStringAsFixed(2)}');
     }
-    if (edit.paidBy != afterPaidBy) {
-      changes.add('Payer: ${getMemberName(edit.paidBy)} → ${getMemberName(afterPaidBy)}');
+    // Compare paidBy maps
+    if (!_mapsEqual(edit.paidBy, afterPaidBy)) {
+      final oldPayers = edit.paidBy.entries
+          .map((e) => '${getMemberName(e.key)}: \$${e.value.toStringAsFixed(2)}')
+          .join(', ');
+      final newPayers = afterPaidBy.entries
+          .map((e) => '${getMemberName(e.key)}: \$${e.value.toStringAsFixed(2)}')
+          .join(', ');
+      changes.add('Payers: $oldPayers → $newPayers');
     }
     if (edit.category != afterCategory) {
       final oldCat = edit.category ?? 'None';
@@ -484,6 +522,14 @@ class ExpenseDetailScreen extends ConsumerWidget {
       case SplitType.percentage:
         return 'By Percentage';
     }
+  }
+
+  bool _mapsEqual(Map<String, double> a, Map<String, double> b) {
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key) || (a[key]! - b[key]!).abs() > 0.01) return false;
+    }
+    return true;
   }
 
   IconData _getCategoryIcon(String? category) {

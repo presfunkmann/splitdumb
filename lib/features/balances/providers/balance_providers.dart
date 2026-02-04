@@ -30,17 +30,13 @@ final groupBalanceProvider =
 
   // Calculate from expenses
   for (final expense in expenses) {
-    if (expense.paidBy == memberId) {
-      // User paid, they are owed by others
-      final totalOwed = expense.splits.entries
-          .where((e) => e.key != memberId)
-          .fold(0.0, (sum, e) => sum + e.value);
-      balance += totalOwed;
-    } else {
-      // User owes the payer
-      final userShare = expense.splits[memberId] ?? 0;
-      balance -= userShare;
-    }
+    // How much did this user pay?
+    final amountPaid = expense.paidBy[memberId] ?? 0.0;
+    // How much does this user owe (their split)?
+    final amountOwed = expense.splits[memberId] ?? 0.0;
+    // Net contribution: paid - owed
+    // Positive means they're owed by others, negative means they owe
+    balance += (amountPaid - amountOwed);
   }
 
   // Adjust for settlements
@@ -87,17 +83,45 @@ final groupMemberBalancesProvider =
 
   // Calculate from expenses
   for (final expense in expenses) {
-    if (expense.paidBy == memberId) {
-      // User paid - each member owes their share
-      for (final entry in expense.splits.entries) {
-        if (entry.key != memberId && balances.containsKey(entry.key)) {
-          balances[entry.key] = (balances[entry.key] ?? 0) + entry.value;
+    // For each payer in this expense
+    for (final payerEntry in expense.paidBy.entries) {
+      final payerId = payerEntry.key;
+      final amountPaid = payerEntry.value;
+      final payerShare = expense.splits[payerId] ?? 0.0;
+      final netContribution = amountPaid - payerShare;
+
+      if (payerId == memberId) {
+        // Current user paid more than their share - others owe them proportionally
+        if (netContribution > 0.01) {
+          final othersTotal = expense.splits.entries
+              .where((e) => e.key != memberId)
+              .fold(0.0, (sum, e) => sum + e.value);
+
+          for (final splitEntry in expense.splits.entries) {
+            if (splitEntry.key != memberId &&
+                balances.containsKey(splitEntry.key)) {
+              final proportion =
+                  othersTotal > 0 ? splitEntry.value / othersTotal : 0.0;
+              balances[splitEntry.key] =
+                  (balances[splitEntry.key] ?? 0) + (netContribution * proportion);
+            }
+          }
+        }
+      } else if (balances.containsKey(payerId)) {
+        // Someone else paid more than their share - current user may owe them
+        if (netContribution > 0.01) {
+          final userShare = expense.splits[memberId] ?? 0.0;
+          final othersTotal = expense.splits.entries
+              .where((e) => e.key != payerId)
+              .fold(0.0, (sum, e) => sum + e.value);
+
+          if (userShare > 0 && othersTotal > 0) {
+            final proportion = userShare / othersTotal;
+            balances[payerId] =
+                (balances[payerId] ?? 0) - (netContribution * proportion);
+          }
         }
       }
-    } else if (balances.containsKey(expense.paidBy)) {
-      // Someone else paid - user owes their share
-      final userShare = expense.splits[memberId] ?? 0;
-      balances[expense.paidBy] = (balances[expense.paidBy] ?? 0) - userShare;
     }
   }
 
@@ -176,12 +200,29 @@ final groupDebtsProvider =
 
   // Calculate from expenses
   for (final expense in expenses) {
-    final payer = expense.paidBy;
-    for (final entry in expense.splits.entries) {
-      if (entry.key != payer && balances.containsKey(entry.key)) {
-        // entry.key owes payer entry.value
-        balances[entry.key]![payer] =
-            (balances[entry.key]![payer] ?? 0) + entry.value;
+    // For each payer in this expense
+    for (final payerEntry in expense.paidBy.entries) {
+      final payerId = payerEntry.key;
+      final amountPaid = payerEntry.value;
+      final payerShare = expense.splits[payerId] ?? 0.0;
+      final netContribution = amountPaid - payerShare;
+
+      if (netContribution > 0.01) {
+        // This payer covered more than their share - others owe them
+        final othersTotal = expense.splits.entries
+            .where((e) => e.key != payerId)
+            .fold(0.0, (sum, e) => sum + e.value);
+
+        for (final splitEntry in expense.splits.entries) {
+          if (splitEntry.key != payerId &&
+              balances.containsKey(splitEntry.key)) {
+            final proportion =
+                othersTotal > 0 ? splitEntry.value / othersTotal : 0.0;
+            final owedAmount = netContribution * proportion;
+            balances[splitEntry.key]![payerId] =
+                (balances[splitEntry.key]![payerId] ?? 0) + owedAmount;
+          }
+        }
       }
     }
   }
