@@ -35,7 +35,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     if (group != null && mounted) {
       context.showSnackBar('Group created!');
-      context.pop();
+      context.go('/groups/${group.id}');
     }
   }
 

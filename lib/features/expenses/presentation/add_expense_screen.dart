@@ -177,7 +177,6 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               ],
               decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixText: '\$ ',
                 prefixIcon: const Icon(Icons.attach_money),
                 filled: true,
                 fillColor: context.colorScheme.surfaceContainerHighest,
@@ -213,7 +212,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'Category',
                 prefixIcon: Icon(Icons.category_outlined),

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:splitdumb/features/auth/providers/auth_providers.dart';
 import 'package:splitdumb/features/expenses/data/expense_repository.dart';
 import 'package:splitdumb/features/expenses/domain/expense_model.dart';
 
@@ -19,10 +18,8 @@ final expenseByIdProvider =
 
 class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
   final ExpenseRepository _repository;
-  final Ref _ref;
 
-  ExpenseNotifier(this._repository, this._ref)
-      : super(const AsyncValue.data(null));
+  ExpenseNotifier(this._repository) : super(const AsyncValue.data(null));
 
   Future<ExpenseModel?> createExpense({
     required String groupId,
@@ -90,10 +87,7 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<ExpenseModel?>> {
 
 final expenseNotifierProvider =
     StateNotifierProvider<ExpenseNotifier, AsyncValue<ExpenseModel?>>((ref) {
-  return ExpenseNotifier(
-    ref.watch(expenseRepositoryProvider),
-    ref,
-  );
+  return ExpenseNotifier(ref.watch(expenseRepositoryProvider));
 });
 
 // Split calculation helpers

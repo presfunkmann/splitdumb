@@ -238,23 +238,60 @@ final groupDebtsProvider =
     }
   }
 
-  // Simplify debts - net out mutual debts
-  final debts = <DebtInfo>[];
-
-  for (final from in memberIds) {
-    for (final to in memberIds) {
-      if (from.compareTo(to) < 0) {
-        final fromOwesTo = balances[from]![to] ?? 0;
-        final toOwesFrom = balances[to]![from] ?? 0;
-        final netDebt = fromOwesTo - toOwesFrom;
-
-        if (netDebt > 0.01) {
-          debts.add(DebtInfo(fromUserId: from, toUserId: to, amount: netDebt));
-        } else if (netDebt < -0.01) {
-          debts.add(
-              DebtInfo(fromUserId: to, toUserId: from, amount: netDebt.abs()));
-        }
+  // Calculate net balance for each member (debt minimization algorithm)
+  final netBalances = <String, double>{};
+  for (final memberId in memberIds) {
+    double balance = 0;
+    for (final otherId in memberIds) {
+      if (memberId != otherId) {
+        // What they owe others
+        balance -= balances[memberId]![otherId] ?? 0;
+        // What others owe them
+        balance += balances[otherId]![memberId] ?? 0;
       }
+    }
+    netBalances[memberId] = balance;
+  }
+
+  // Separate into debtors (negative) and creditors (positive)
+  final debtors = <String, double>{};
+  final creditors = <String, double>{};
+  for (final entry in netBalances.entries) {
+    if (entry.value < -0.01) {
+      debtors[entry.key] = -entry.value; // Store as positive amount owed
+    } else if (entry.value > 0.01) {
+      creditors[entry.key] = entry.value;
+    }
+  }
+
+  // Greedy matching to minimize transactions
+  final debts = <DebtInfo>[];
+  while (debtors.isNotEmpty && creditors.isNotEmpty) {
+    final debtorId = debtors.keys.first;
+    final creditorId = creditors.keys.first;
+
+    final debtorOwes = debtors[debtorId]!;
+    final creditorOwed = creditors[creditorId]!;
+
+    final amount = debtorOwes < creditorOwed ? debtorOwes : creditorOwed;
+
+    debts.add(DebtInfo(
+      fromUserId: debtorId,
+      toUserId: creditorId,
+      amount: amount,
+    ));
+
+    // Update balances
+    if ((debtorOwes - amount).abs() < 0.01) {
+      debtors.remove(debtorId);
+    } else {
+      debtors[debtorId] = debtorOwes - amount;
+    }
+
+    if ((creditorOwed - amount).abs() < 0.01) {
+      creditors.remove(creditorId);
+    } else {
+      creditors[creditorId] = creditorOwed - amount;
     }
   }
 
